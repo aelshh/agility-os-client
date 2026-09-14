@@ -37,7 +37,10 @@ export function OtpInput({
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+  // Parent sends a fresh code right before mounting us, so begin the resend
+  // countdown immediately — the UI never lets the user request twice in a row.
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const submittingRef = useRef(false);
@@ -128,15 +131,18 @@ export function OtpInput({
   );
 
   const handleResend = useCallback(async () => {
-    if (cooldown > 0) return;
+    if (cooldown > 0 || resending) return;
+    setResending(true);
     try {
       await onResend(email);
       toast.success("A new code has been sent.");
       setCooldown(RESEND_COOLDOWN_S);
     } catch {
       toast.error("Failed to resend code. Try again later.");
+    } finally {
+      setResending(false);
     }
-  }, [email, cooldown, onResend]);
+  }, [email, cooldown, resending, onResend]);
 
   return (
     <div className={`flex flex-col ${compact ? "gap-3" : "gap-5"}`}>
@@ -201,15 +207,21 @@ export function OtpInput({
         }`}
       >
         Didn't receive the code?{" "}
-        {cooldown > 0 ? (
-          <span className="font-medium text-neutral-400">
-            Resend in {cooldown}s
-          </span>
-        ) : (
-          <Button variant="link" onClick={() => void handleResend()}>
-            Resend code
-          </Button>
-        )}
+        <span className="inline-block w-24 text-left">
+          {cooldown > 0 || resending ? (
+            <span className="font-medium tabular-nums text-neutral-400">
+              {resending ? "Resending…" : `Resend in ${cooldown}s`}
+            </span>
+          ) : (
+            <Button
+              variant="link"
+              loading={resending}
+              onClick={() => void handleResend()}
+            >
+              Resend code
+            </Button>
+          )}
+        </span>
       </p>
 
       {/* Cancel */}

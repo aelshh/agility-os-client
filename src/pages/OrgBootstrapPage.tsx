@@ -3,8 +3,10 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "@tanstack/react-router";
 
-import { Button, OtpInput } from "../components";
+import { Button, Dropdown, OtpInput } from "../components";
 import { apiBootstrapOrg, apiPreverifyOtp, apiSendOtpEmail } from "../api/auth";
+import { COUNTRIES } from "../data/countries";
+import { LANGUAGES, TIMEZONES } from "../data/options";
 import { useAuth } from "../features/auth";
 import type { AuthErrorPayload } from "../features/auth";
 import { EASE, slideUp } from "../lib/animation";
@@ -18,43 +20,6 @@ const labelClasses = "text-sm font-medium text-neutral-600";
 
 const inputClasses =
   "w-full rounded-xl border border-neutral-300 bg-neutral-50/70 px-4 py-2.5 text-sm text-neutral-950 placeholder:text-neutral-500 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
-
-const selectClasses =
-  "w-full rounded-xl border border-neutral-300 bg-neutral-50/70 px-4 py-2.5 text-sm text-neutral-950 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
-
-// ---------------------------------------------------------------------------
-// Data
-// ---------------------------------------------------------------------------
-
-const TIMEZONES = [
-  { value: "Asia/Kolkata", label: "India Standard Time (IST, UTC+5:30)" },
-  { value: "Asia/Dubai", label: "Gulf Standard Time (GST, UTC+4)" },
-  { value: "Asia/Singapore", label: "Singapore Time (SGT, UTC+8)" },
-  { value: "Asia/Tokyo", label: "Japan Standard Time (JST, UTC+9)" },
-  { value: "Europe/London", label: "Greenwich Mean Time (GMT, UTC+0)" },
-  { value: "Europe/Paris", label: "Central European Time (CET, UTC+1)" },
-  { value: "America/New_York", label: "Eastern Time (ET, UTC-5)" },
-  { value: "America/Chicago", label: "Central Time (CT, UTC-6)" },
-  { value: "America/Los_Angeles", label: "Pacific Time (PT, UTC-8)" },
-  { value: "America/Sao_Paulo", label: "Brasília Time (BRT, UTC-3)" },
-  {
-    value: "Australia/Sydney",
-    label: "Australian Eastern Time (AEST, UTC+10)",
-  },
-];
-
-const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "hi", label: "Hindi (हिन्दी)" },
-  { value: "ta", label: "Tamil (தமிழ்)" },
-  { value: "te", label: "Telugu (తెలుగు)" },
-  { value: "mr", label: "Marathi (मराठी)" },
-  { value: "ar", label: "Arabic (عربي)" },
-  { value: "fr", label: "French (Français)" },
-  { value: "de", label: "German (Deutsch)" },
-  { value: "pt", label: "Portuguese (Português)" },
-  { value: "es", label: "Spanish (Español)" },
-];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -385,6 +350,7 @@ export function OrgBootstrapPage() {
   return (
     <div className="min-h-screen font-sans flex flex-col items-center justify-center bg-neutral-50 p-6 overflow-x-hidden">
       <motion.div
+        data-dropdown-bound
         initial={{ opacity: 0, y: 12, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: EASE }}
@@ -592,46 +558,45 @@ export function OrgBootstrapPage() {
                   </Field>
 
                   <Field label="Timezone" error={fieldErrors.orgTimezone}>
-                    <select
+                    <Dropdown
                       value={form.orgTimezone}
-                      onChange={(e) => set("orgTimezone", e.target.value)}
-                      className={selectClasses}
-                    >
-                      {TIMEZONES.map((tz) => (
-                        <option key={tz.value} value={tz.value}>
-                          {tz.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => set("orgTimezone", v)}
+                      options={TIMEZONES}
+                      searchable
+                      searchPlaceholder="Search timezone…"
+                      placeholder="Select a timezone"
+                      ariaLabel="Timezone"
+                    />
                   </Field>
 
                   <Field
                     label="Default language"
                     error={fieldErrors.orgLanguage}
                   >
-                    <select
+                    <Dropdown
                       value={form.orgLanguage}
-                      onChange={(e) => set("orgLanguage", e.target.value)}
-                      className={selectClasses}
-                    >
-                      {LANGUAGES.map((lang) => (
-                        <option key={lang.value} value={lang.value}>
-                          {lang.label}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(v) => set("orgLanguage", v)}
+                      options={LANGUAGES}
+                      searchable
+                      searchPlaceholder="Search language…"
+                      placeholder="Select a language"
+                      ariaLabel="Default language"
+                    />
                   </Field>
 
                   <Field
                     label="Default region"
                     error={fieldErrors.defaultRegion}
                   >
-                    <input
-                      type="text"
+                    <Dropdown
                       value={form.defaultRegion}
-                      onChange={(e) => set("defaultRegion", e.target.value)}
-                      placeholder="e.g. India, APAC, North America"
-                      className={inputClasses}
+                      onChange={(v) => set("defaultRegion", v)}
+                      options={COUNTRIES}
+                      searchable
+                      searchPlaceholder="Search country…"
+                      placeholder="Select a country"
+                      emptyMessage="No matching country found."
+                      ariaLabel="Default region"
                     />
                   </Field>
                 </>
@@ -661,7 +626,11 @@ export function OrgBootstrapPage() {
                     />
                     <ReviewRow
                       label="Default region"
-                      value={form.defaultRegion}
+                      value={
+                        COUNTRIES.find(
+                          (c) => c.value === form.defaultRegion,
+                        )?.label ?? form.defaultRegion
+                      }
                     />
                   </ReviewSection>
                 </div>
