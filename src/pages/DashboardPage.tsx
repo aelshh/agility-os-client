@@ -5,6 +5,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useAuth } from "../features/auth";
 import { Button } from "../components";
 import { pageVariants, stagger, fadeUp } from "../lib/animation";
+import { OrgTreeView } from "../features/org-tree/OrgTreeView";
 
 const ROLE_LABELS: Record<string, string> = {
   architect: "Architect",
@@ -39,7 +40,7 @@ export function DashboardPage() {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="min-h-screen font-sans flex flex-col items-center justify-center gap-8 bg-neutral-50 p-8"
+      className="min-h-screen font-sans flex flex-col items-center justify-start gap-8 bg-neutral-50 p-8"
     >
       <motion.div
         variants={stagger}
@@ -83,6 +84,28 @@ export function DashboardPage() {
           {user?.email}
         </p>
       </motion.header>
+
+      <motion.section
+        variants={fadeUp}
+        initial="initial"
+        animate="animate"
+        className="w-full max-w-5xl"
+      >
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="font-serif text-xl font-medium text-neutral-950">
+              Org tree
+            </h2>
+            <p className="text-xs text-neutral-500">
+              Built from your HRMS employee directory. Click a node to collapse
+              its subtree; drag to rearrange, scroll to zoom.
+            </p>
+          </div>
+        </div>
+        <div className="h-[540px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          <OrgTreeView />
+        </div>
+      </motion.section>
 
       <Button
         variants={fadeUp}

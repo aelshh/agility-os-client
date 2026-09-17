@@ -38,3 +38,35 @@ button:disabled,
 a[aria-disabled="true"] {
   cursor: not-allowed;
 }
+
+/* Remove xyflow default styling from group & department nodes */
+.org-flow .react-flow__node-group,
+.org-flow .react-flow__node-department,
+.react-flow__node-group,
+.react-flow__node-department {
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.org-flow .react-flow__node-group:hover,
+.org-flow .react-flow__node-group:focus,
+.org-flow .react-flow__node-group:focus-visible,
+.org-flow .react-flow__node-group.selected,
+.org-flow .react-flow__node-department:hover,
+.org-flow .react-flow__node-department:focus,
+.org-flow .react-flow__node-department:focus-visible,
+.org-flow .react-flow__node-department.selected,
+.react-flow__node-group:hover,
+.react-flow__node-group:focus,
+.react-flow__node-group:focus-visible,
+.react-flow__node-group.selected,
+.react-flow__node-department:hover,
+.react-flow__node-department:focus,
+.react-flow__node-department:focus-visible,
+.react-flow__node-department.selected {
+  box-shadow: none !important;
+}

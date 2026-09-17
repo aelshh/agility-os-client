@@ -298,7 +298,7 @@ export function OrgBootstrapPage() {
 
       setUser(res.user);
       void router.invalidate();
-      void router.navigate({ to: "/" });
+      void router.navigate({ to: "/connect-hrms" });
     } catch (err) {
       const payload = err as AuthErrorPayload;
 
@@ -627,9 +627,8 @@ export function OrgBootstrapPage() {
                     <ReviewRow
                       label="Default region"
                       value={
-                        COUNTRIES.find(
-                          (c) => c.value === form.defaultRegion,
-                        )?.label ?? form.defaultRegion
+                        COUNTRIES.find((c) => c.value === form.defaultRegion)
+                          ?.label ?? form.defaultRegion
                       }
                     />
                   </ReviewSection>
