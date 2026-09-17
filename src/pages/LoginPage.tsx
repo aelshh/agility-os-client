@@ -268,16 +268,16 @@ export function LoginPage() {
               <Divider />
             </div>
 
-{/* Google OAuth — sign in only (existing work-email accounts).
+            {/* Google OAuth — sign in only (existing work-email accounts).
             Account creation is manual-only via the OTP signup flow. */}
-        <Button
-          href="/api/auth/google"
-          variant="outline"
-          className="w-full"
-          icon={GOOGLE_ICON}
-        >
-          Sign in with Google
-        </Button>
+            <Button
+              href="/api/auth/google"
+              variant="outline"
+              className="w-full"
+              icon={GOOGLE_ICON}
+            >
+              Sign in with Google
+            </Button>
 
             {/* Org setup link */}
             <p className="mt-8 text-center text-sm text-neutral-600">
