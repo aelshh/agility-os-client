@@ -10,4 +10,16 @@ export default defineConfig({
       '/api': 'http://localhost:3000',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react-dom/') || id.includes('node_modules/react/')) {
+            return 'react'
+          }
+          if (id.includes('node_modules/framer-motion/')) return 'framer-motion'
+        },
+      },
+    },
+  },
 })
