@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useRouter } from "@tanstack/react-router";
 
 import { useAuth } from "../features/auth";
-import { Button } from "../components";
 import { pageVariants, stagger, fadeUp } from "../lib/animation";
 import { OrgTreeView } from "../features/org-tree/OrgTreeView";
 import { apiGetOrgTree } from "../api/hrms";
@@ -87,7 +86,7 @@ function TeammatesToInviteCard() {
 }
 
 export function DashboardPage() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -177,17 +176,6 @@ export function DashboardPage() {
           <OrgTreeView />
         </div>
       </motion.section>
-
-      <Button
-        variants={fadeUp}
-        initial="initial"
-        animate="animate"
-        variant="outline"
-        onClick={signOut}
-        className="px-5"
-      >
-        Sign out
-      </Button>
     </motion.div>
   );
 }

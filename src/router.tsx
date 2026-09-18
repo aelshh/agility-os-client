@@ -2,18 +2,21 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Outlet,
   redirect,
+  useRouter,
 } from "@tanstack/react-router";
+import { Suspense } from "react";
 
 import { apiGetMe } from "./api/auth";
 import { apiGetHrmsStatus } from "./api/hrms";
+import { AppShell } from "./components/AppShell";
 import { AuthProvider } from "./features/auth";
-import { ConnectHrmsPage } from "./pages/ConnectHrmsPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { InviteAcceptPage } from "./pages/InviteAcceptPage";
-import { LoginPage } from "./pages/LoginPage";
-import { OrgBootstrapPage } from "./pages/OrgBootstrapPage";
+import { LoadingPage } from "./pages/LoadingPage";
+import { apiGetProfile } from "./api/profile";
+import type { AuthErrorPayload } from "./features/auth";
+import { Button } from "./components";
 
 // ---------------------------------------------------------------------------
 // Root layout
@@ -22,7 +25,9 @@ import { OrgBootstrapPage } from "./pages/OrgBootstrapPage";
 function RootLayout() {
   return (
     <AuthProvider>
-      <Outlet />
+      <Suspense fallback={<LoadingPage />}>
+        <Outlet />
+      </Suspense>
     </AuthProvider>
   );
 }
@@ -45,17 +50,31 @@ async function loadMe() {
 }
 
 // ---------------------------------------------------------------------------
-// / — Dashboard (protected)
+// Authenticated app shell — wraps all protected pages in the shared nav.
 // ---------------------------------------------------------------------------
 
-const indexRoute = createRoute({
+const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/",
+  id: "protected",
   beforeLoad: async () => {
     const user = await loadMe();
     if (!user) {
       throw redirect({ to: "/login" });
     }
+    return { user };
+  },
+  component: AppShell,
+});
+
+// ---------------------------------------------------------------------------
+// / — Dashboard (protected)
+// ---------------------------------------------------------------------------
+
+const indexRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/",
+  beforeLoad: async ({ context }) => {
+    const user = context.user;
     // HRMS connect is a mandatory post-signup step for architects.
     if (user.role === "architect") {
       let connected = true;
@@ -69,9 +88,41 @@ const indexRoute = createRoute({
         throw redirect({ to: "/connect-hrms" });
       }
     }
-    return { user };
   },
-  component: DashboardPage,
+  component: lazyRouteComponent(
+    () => import("./pages/DashboardPage"),
+    "DashboardPage",
+  ),
+});
+
+// ---------------------------------------------------------------------------
+// /profile — View & edit profile details (protected)
+// ---------------------------------------------------------------------------
+
+function ProfileLoadError({ error }: { error: unknown }) {
+  const router = useRouter();
+  const message =
+    (error as AuthErrorPayload | null)?.message ??
+    "Couldn't load your profile. Please try again.";
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6">
+      <p className="text-sm font-medium text-neutral-600">{message}</p>
+      <Button variant="outline" onClick={() => void router.invalidate()}>
+        Try again
+      </Button>
+    </div>
+  );
+}
+
+const profileRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/profile",
+  loader: async () => apiGetProfile(),
+  errorComponent: ProfileLoadError,
+  component: lazyRouteComponent(
+    () => import("./pages/ProfilePage"),
+    "ProfilePage",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -88,7 +139,10 @@ const connectHrmsRoute = createRoute({
     }
     return { user };
   },
-  component: ConnectHrmsPage,
+  component: lazyRouteComponent(
+    () => import("./pages/ConnectHrmsPage"),
+    "ConnectHrmsPage",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -105,7 +159,7 @@ const loginRoute = createRoute({
       throw redirect({ to: "/" });
     }
   },
-  component: LoginPage,
+  component: lazyRouteComponent(() => import("./pages/LoginPage"), "LoginPage"),
 });
 
 // ---------------------------------------------------------------------------
@@ -122,7 +176,10 @@ const signupRoute = createRoute({
       throw redirect({ to: "/" });
     }
   },
-  component: OrgBootstrapPage,
+  component: lazyRouteComponent(
+    () => import("./pages/OrgBootstrapPage"),
+    "OrgBootstrapPage",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -132,7 +189,10 @@ const signupRoute = createRoute({
 const acceptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/accept/$token",
-  component: InviteAcceptPage,
+  component: lazyRouteComponent(
+    () => import("./pages/InviteAcceptPage"),
+    "InviteAcceptPage",
+  ),
 });
 
 // ---------------------------------------------------------------------------
@@ -140,7 +200,7 @@ const acceptRoute = createRoute({
 // ---------------------------------------------------------------------------
 
 const routeTree = rootRoute.addChildren([
-  indexRoute,
+  protectedRoute.addChildren([indexRoute, profileRoute]),
   connectHrmsRoute,
   loginRoute,
   signupRoute,

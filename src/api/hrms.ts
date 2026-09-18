@@ -153,9 +153,18 @@ export async function apiUploadCsv(
 // Org tree
 // ---------------------------------------------------------------------------
 
-export async function apiGetOrgTree(): Promise<OrgTreeData> {
-  const res = await fetch("/api/hrms/tree", { credentials: "include" });
-  const data = await parseJson(res);
-  if (!res.ok) throw data as AuthErrorPayload;
-  return data as unknown as OrgTreeData;
+let orgTreeInFlight: Promise<OrgTreeData> | null = null;
+
+export function apiGetOrgTree(): Promise<OrgTreeData> {
+  if (orgTreeInFlight) return orgTreeInFlight;
+  orgTreeInFlight = fetch("/api/hrms/tree", { credentials: "include" })
+    .then(async (res) => {
+      const data = await parseJson(res);
+      if (!res.ok) throw data as AuthErrorPayload;
+      return data as unknown as OrgTreeData;
+    })
+    .finally(() => {
+      orgTreeInFlight = null;
+    });
+  return orgTreeInFlight;
 }
