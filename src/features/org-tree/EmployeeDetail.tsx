@@ -108,7 +108,8 @@ export function EmployeeDetail({
     viewerIsAdmin &&
     !isSelf &&
     !!employee.userId &&
-    employee.userStatus === "active";
+    employee.userStatus === "active" &&
+    employee.role !== "architect";
 
   return (
     <div className="space-y-5">

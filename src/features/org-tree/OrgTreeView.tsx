@@ -295,11 +295,11 @@ function OrgTreeCanvas() {
       if (s.sent > 0) {
         toast.success(
           s.skipped + s.failed > 0
-            ? `Invite${s.sent === 1 ? "" : "s"} sent (${s.sent}); ${s.skipped + s.failed} couldn't be sent.`
+            ? `Invite${s.sent === 1 ? "" : "s"} sent (${s.sent}); ${s.skipped + s.failed} failed to send.`
             : `Invite${s.sent === 1 ? "" : "s"} sent to ${s.sent} teammate${s.sent === 1 ? "" : "s"}.`,
         );
       } else if (s.failed > 0) {
-        toast.error("Couldn't send invites. Check your email configuration.");
+        toast.error("Failed to send email.");
       } else {
         toast.info("Nothing to send — those people are already set up.");
       }

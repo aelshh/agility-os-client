@@ -73,7 +73,9 @@ export function EmployeeNode({ id, data, selected }: EmployeeNodeProps) {
   const canInvite =
     viewerIsAdmin && !isSelf && !!data.userId && userStatus === "invited" && !!email;
   const canToggleAdmin =
-    viewerIsAdmin && !isSelf && !!data.userId && userStatus === "active";
+    viewerIsAdmin && !isSelf && !!data.userId && userStatus === "active" && role !== "architect";
+
+  const hasActions = canInvite || canToggleAdmin;
 
   const [hovered, setHovered] = useState(false);
 
@@ -99,11 +101,11 @@ export function EmployeeNode({ id, data, selected }: EmployeeNodeProps) {
       }}
       onMouseEnter={() => {
         setHovered(true);
-        onPanelOpenChange?.(id, true);
+        if (hasActions) onPanelOpenChange?.(id, true);
       }}
       onMouseLeave={() => {
         setHovered(false);
-        onPanelOpenChange?.(id, false);
+        if (hasActions) onPanelOpenChange?.(id, false);
       }}
       className={cn(
         "group relative flex h-24 w-52 flex-col justify-center rounded-xl border bg-white px-4 transition-colors select-none",
@@ -203,7 +205,7 @@ export function EmployeeNode({ id, data, selected }: EmployeeNodeProps) {
 
       {/* hover actions (admins only) — float to the left of the card */}
       <AnimatePresence>
-        {hovered && (canInvite || canToggleAdmin) && (
+        {hovered && hasActions && (
           <motion.div
             initial={{ opacity: 0, x: 6, scale: 0.98 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
