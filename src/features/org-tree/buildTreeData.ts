@@ -67,8 +67,24 @@ export type OrgEmployeeNodeData = {
   parentId: string | null;
   hasChildren: boolean;
   depth: number;
+  /** Linked app user id — null when no account was provisioned. */
+  userId: string | null;
+  /** Lifecycle of the linked account: invited | active | churned | null. */
+  userStatus: string | null;
+  hasPendingInvite: boolean;
+  isAdmin: boolean;
+  /** True when this node is the viewer-facing self row (avoids self-invites). */
+  isSelf?: boolean;
+  /** Viewer-admin context + action wiring — injected by OrgTreeView. */
+  viewerIsAdmin?: boolean;
+  onInvite?: (id: string) => void;
+  onToggleAdmin?: (id: string) => void;
+  onSelectNode?: (id: string) => void;
+  onPanelOpenChange?: (id: string, open: boolean) => void;
   collapsed?: boolean;
   toggleCollapse?: (id: string) => void;
+  /** True when this node is the focus of the open detail drawer. */
+  highlighted?: boolean;
 };
 
 export type OrgGroupNodeData = {
@@ -83,6 +99,9 @@ export type OrgGroupNodeData = {
   depth: number;
   collapsed?: boolean;
   toggleCollapse?: (id: string) => void;
+  onSelectNode?: (id: string) => void;
+  /** True when this node is the focus of the open detail drawer. */
+  highlighted?: boolean;
 };
 
 export type OrgFlowNode =
@@ -385,6 +404,10 @@ export function layoutOrgTree(orgTree: OrgTreeData): {
           parentId: parentIdById.get(id) ?? null,
           hasChildren: (d.children?.length ?? 0) > 0,
           depth: d.depth ?? 0,
+          userId: emp.userId,
+          userStatus: emp.userStatus,
+          hasPendingInvite: emp.hasPendingInvite,
+          isAdmin: emp.isAdmin,
         },
         type: "employee",
       });

@@ -15,17 +15,21 @@ interface GroupNodeProps {
  * expansion of the department's direct children (one level down).
  */
 export function GroupNode({ id, data, selected }: GroupNodeProps) {
-  const { label, members, isRoot, collapsed, toggleCollapse } = data;
+  const { label, members, isRoot, collapsed, highlighted, toggleCollapse, onSelectNode } = data;
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => toggleCollapse?.(id)}
+      onClick={() => {
+        toggleCollapse?.(id);
+        onSelectNode?.(id);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           toggleCollapse?.(id);
+          onSelectNode?.(id);
         }
       }}
       className={cn(
@@ -34,6 +38,7 @@ export function GroupNode({ id, data, selected }: GroupNodeProps) {
           ? "bg-neutral-950 text-white"
           : "bg-neutral-800 text-white hover:bg-neutral-700",
         selected && "ring-2 ring-neutral-950 ring-offset-2",
+        highlighted && "ring-2 ring-blue-500 ring-offset-2",
       )}
     >
       <Handle

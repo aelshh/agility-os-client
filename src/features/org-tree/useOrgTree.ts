@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { OrgFlowEdge, OrgFlowNode } from "./buildTreeData";
 import { computeMatches, layoutOrgTree, visibleSubset } from "./buildTreeData";
@@ -24,6 +24,7 @@ export function useOrgTree() {
   const collapsedRef = useRef<Set<string>>(new Set());
   /** Non-null while a search result is isolated on the canvas. */
   const searchKeepRef = useRef<Set<string> | null>(null);
+  const refreshTokenRef = useRef(0);
 
   /**
    * Computes the "spine" default: the org-root chain (executive dept →
@@ -93,6 +94,40 @@ export function useOrgTree() {
     setFocusId(id);
   }
 
+  /**
+   * Ensures a node is visible on the canvas: clears search isolation,
+   * expands the collapsed path from the root down to the node, and focuses
+   * the viewport on its subtree. Used when navigating from the detail drawer.
+   */
+  function revealAndFocus(id: string) {
+    const { nodes: allNodes, edges: allEdges } = layoutRef.current;
+    if (allNodes.length === 0) return;
+
+    clearSearch();
+
+    const parentByChild = new Map(
+      allEdges.filter((e) => e.structural).map((e) => [e.target, e.source]),
+    );
+
+    const toExpand = new Set<string>();
+    let cursor: string | undefined = id;
+    while (cursor && !toExpand.has(cursor)) {
+      toExpand.add(cursor);
+      cursor = parentByChild.get(cursor);
+    }
+
+    const next = new Set(collapsedRef.current);
+    let changed = false;
+    for (const nid of toExpand) {
+      if (next.has(nid)) {
+        next.delete(nid);
+        changed = true;
+      }
+    }
+    if (changed) applyCollapse(next);
+    setFocusId(id);
+  }
+
   function collapseAll() {
     const { nodes: allNodes, edges: allEdges } = layoutRef.current;
     if (allNodes.length === 0) return;
@@ -155,48 +190,63 @@ export function useOrgTree() {
     setEdges(visible.edges);
   }
 
+  const loadTree = useCallback(async () => {
+    const token = ++refreshTokenRef.current;
+
+    const data = await apiGetOrgTree();
+
+    if (token !== refreshTokenRef.current) return;
+
+    const layout = layoutOrgTree(data);
+    if (layout.nodes.length === 0) {
+      setOrgTree(data);
+      setStatus("ready");
+      return;
+    }
+    const nodesWithToggle: OrgFlowNode[] = layout.nodes.map(
+      (node) =>
+        ({
+          ...node,
+          data: { ...node.data, toggleCollapse } as typeof node.data,
+        }) as OrgFlowNode,
+    );
+    layoutRef.current = { nodes: nodesWithToggle, edges: layout.edges };
+
+    collapsedRef.current = defaultCollapsed(nodesWithToggle, layout.edges);
+    const visible = visibleSubset(
+      nodesWithToggle,
+      layout.edges,
+      collapsedRef.current,
+    );
+
+    setOrgTree(data);
+    setNodes(commitCollapse(visible.nodes));
+    setEdges(visible.edges);
+    setStatus("ready");
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
-    apiGetOrgTree()
-      .then((data) => {
-        if (cancelled) return;
-        const layout = layoutOrgTree(data);
-        if (layout.nodes.length === 0) {
-          setStatus("ready");
-          return;
-        }
-        const nodesWithToggle: OrgFlowNode[] = layout.nodes.map(
-          (node) =>
-            ({
-              ...node,
-              data: { ...node.data, toggleCollapse } as typeof node.data,
-            }) as OrgFlowNode,
-        );
-        layoutRef.current = { nodes: nodesWithToggle, edges: layout.edges };
-
-        collapsedRef.current = defaultCollapsed(nodesWithToggle, layout.edges);
-        const visible = visibleSubset(
-          nodesWithToggle,
-          layout.edges,
-          collapsedRef.current,
-        );
-
-        setOrgTree(data);
-        setNodes(commitCollapse(visible.nodes));
-        setEdges(visible.edges);
-        setStatus("ready");
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err?.message ?? "Failed to load the org tree.");
-        setStatus("error");
-      });
+    loadTree().catch((err) => {
+      if (cancelled) return;
+      setError(err?.message ?? "Failed to load the org tree.");
+      setStatus("error");
+    });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadTree]);
+
+  const refresh = useCallback(() => {
+    setError(null);
+    setStatus("loading");
+    loadTree().catch((err) => {
+      setError(err?.message ?? "Failed to reload the org tree.");
+      setStatus("error");
+    });
+  }, [loadTree]);
 
   return {
     status,
@@ -210,9 +260,11 @@ export function useOrgTree() {
     searchResults,
     clearFocus,
     toggleCollapse,
+    revealAndFocus,
     collapseAll,
     expandAll,
     search,
     clearSearch,
+    refresh,
   };
 }

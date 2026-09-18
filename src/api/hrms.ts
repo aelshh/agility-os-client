@@ -69,13 +69,21 @@ export type OrgTreeNode = {
   externalManagerId: string | null;
   name: string;
   email: string | null;
+  phone: string | null;
   designation: string | null;
   department: string | null;
   region: string | null;
   role: string;
   teamId: string | null;
+  hireDate: string | null;
   isSales: boolean;
   status: string;
+  /** Linked app user id if this employee has a provisioned account. */
+  userId: string | null;
+  /** Lifecycle of the provisioned account: invited | active | churned | null. */
+  userStatus: string | null;
+  hasPendingInvite: boolean;
+  isAdmin: boolean;
 };
 
 export type OrgTreeTeam = {
@@ -96,6 +104,8 @@ export type OrgTreeData = {
   teams: OrgTreeTeam[];
   reportingEdges: OrgTreeEdge[];
   userRolesById: Record<string, string>;
+  /** Whether the viewer is a currently active org admin. */
+  viewerIsAdmin: boolean;
 };
 
 type ApiResponse = Record<string, unknown>;
