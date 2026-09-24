@@ -108,7 +108,7 @@ export function DashboardPage() {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="min-h-screen font-sans flex flex-col items-center justify-start gap-8 bg-neutral-50 p-8"
+      className="flex min-h-screen flex-col items-center justify-start gap-8 bg-neutral-50 px-4 py-6 font-sans sm:px-6 lg:p-8"
     >
       <motion.div
         variants={stagger}
@@ -172,7 +172,7 @@ export function DashboardPage() {
             </p>
           </div>
         </div>
-        <div className="h-[540px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        <div className="h-[420px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm sm:h-[540px]">
           <OrgTreeView />
         </div>
       </motion.section>

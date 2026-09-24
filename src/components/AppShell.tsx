@@ -72,6 +72,23 @@ function ProfileIcon() {
   );
 }
 
+function CoursesIcon() {
+  return (
+    <Icon>
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+    </Icon>
+  );
+}
+
+function ApprovalsIcon() {
+  return (
+    <Icon>
+      <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z" />
+      <path d="m9 12 2 2 4-4" />
+    </Icon>
+  );
+}
+
 function SignOutIcon() {
   return (
     <Icon>
@@ -275,9 +292,28 @@ export function AppShell() {
     { to: "/", label: "Dashboard", icon: <DashboardIcon /> },
     { to: "/profile", label: "Profile", icon: <ProfileIcon /> },
   ];
+  if (user?.role === "content_curator" || user?.role === "architect") {
+    navItems.push({ to: "/courses", label: "Courses", icon: <CoursesIcon /> });
+  }
+  if (user?.role === "architect") {
+    navItems.push({
+      to: "/courses/approvals",
+      label: "Approvals",
+      icon: <ApprovalsIcon />,
+    });
+  }
 
-  const isActive = (to: string) =>
-    to === "/" ? pathname === "/" : pathname.startsWith(to);
+  const isActive = (to: string) => {
+    if (to === "/") return pathname === "/";
+    if (to === "/courses") {
+      return (
+        pathname === "/courses" ||
+        pathname === "/courses/new" ||
+        /^\/courses\/[^/]+\/edit$/.test(pathname)
+      );
+    }
+    return pathname === to;
+  };
 
   const expanded = !sidebarCollapsed;
 
@@ -295,12 +331,12 @@ export function AppShell() {
     ));
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-sans md:flex">
+    <div className="flex h-screen h-dvh overflow-hidden bg-neutral-50 font-sans">
       {/* ── Desktop sidebar (collapsible icon rail) ── */}
       <motion.aside
         animate={{ width: expanded ? 256 : 64 }}
         transition={{ duration: 0.2, ease: EASE }}
-        className="sticky top-0 z-30 hidden h-screen shrink-0 flex-col overflow-hidden border-r border-neutral-200 bg-white md:flex"
+        className="z-30 hidden h-full shrink-0 flex-col overflow-hidden border-r border-neutral-200 bg-white md:flex"
       >
         <div
           className={cn(
@@ -351,9 +387,9 @@ export function AppShell() {
       </motion.aside>
 
       {/* ── Content column ── */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-neutral-200 bg-white/90 px-4 backdrop-blur md:hidden">
+        <div className="flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-between border-b border-neutral-200 bg-white/90 px-4 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
           <Link
             to="/"
             className="font-serif text-lg font-medium tracking-normal text-neutral-950"
@@ -371,7 +407,7 @@ export function AppShell() {
           </button>
         </div>
 
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto overscroll-contain">
           <Suspense fallback={<ContentLoader />}>
             <Outlet />
           </Suspense>

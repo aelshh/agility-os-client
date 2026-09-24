@@ -20,11 +20,25 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+video {
+  max-width: 100%;
 }
 
 ::selection {
   background-color: #171717;
   color: #ffffff;
+}
+
+/* Dynamic viewport height so bashful mobile browser chrome never
+   overlaps an app that relies on h-full / h-screen. */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
 }
 
 button,
@@ -69,4 +83,11 @@ a[aria-disabled="true"] {
 .react-flow__node-department:focus-visible,
 .react-flow__node-department.selected {
   box-shadow: none !important;
+}
+
+/* Ensure org-tree edges are always painted, regardless of global
+   svg/media styles leaking into the edge viewport. */
+.org-flow .react-flow__edge-path {
+  stroke: #a3a3a3;
+  stroke-width: 1.5;
 }

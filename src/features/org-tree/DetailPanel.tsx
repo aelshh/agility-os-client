@@ -44,7 +44,7 @@ export function DetailPanel({
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 480, opacity: 0 }}
           transition={{ duration: 0.28, ease: EASE }}
-          className="fixed bottom-4 right-4 top-4 z-30 flex w-[380px] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-neutral-900/10"
+          className="fixed bottom-4 right-4 top-4 z-30 flex w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-neutral-900/10"
         >
           <div className="flex items-start justify-between gap-3 border-b border-neutral-100 px-5 py-4">
             <div className="min-w-0 flex-1">

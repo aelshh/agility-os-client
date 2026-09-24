@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Background,
   Controls,
@@ -15,6 +16,7 @@ import "@xyflow/react/dist/style.css";
 import { toast } from "sonner";
 
 import { cn } from "../../lib/cn";
+import { EASE } from "../../lib/animation";
 import { Button, Modal, Spinner } from "../../components";
 import { useAuth } from "../auth";
 import { ROLE_COLOR, ROLE_LABELS } from "./buildTreeData";
@@ -185,6 +187,34 @@ function OrgTreeCanvas() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [adminBusy, setAdminBusy] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+
+  /** Legend/controls overlay — collapsed by default on phones (<768px). */
+  const [legendOpen, setLegendOpen] = useState(
+    () => (typeof window === "undefined" ? true : window.innerWidth >= 768),
+  );
+
+  /** Canvas fullscreen — native Fullscreen API when available, CSS
+   *  fixed-overlay fallback otherwise (works on iOS Safari). */
+  const [isFs, setIsFs] = useState(false);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFs(document.fullscreenElement != null);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
+
+  const handleToggleFullscreen = useCallback(() => {
+    const el = fullscreenRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+      setIsFs(false);
+    } else {
+      void el.requestFullscreen?.().catch(() => {});
+      setIsFs(true);
+    }
+  }, []);
 
   /** Employee card currently showing the floating action panel (hover). */
   const [panelNodeId, setPanelNodeId] = useState<string | null>(null);
@@ -606,7 +636,13 @@ function OrgTreeCanvas() {
   }
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      ref={fullscreenRef}
+      className={cn(
+        "relative h-full w-full",
+        isFs && "fixed inset-0 z-[70] h-dvh w-full",
+      )}
+    >
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -626,20 +662,23 @@ function OrgTreeCanvas() {
       >
         <Background gap={32} size={1.5} color="#e7e7e7" />
         <Controls position="bottom-left" showInteractive={false} />
-        <MiniMap
-          position="bottom-right"
-          nodeColor={(n: Node) => {
-            const d = n.data as { kind?: string; role?: string };
-            if (d.kind === "group" || n.type === "department") return "#737373";
-            return ROLE_COLOR[(d.role as string) ?? ""] ?? "#a3a3a3";
-          }}
-          nodeStrokeWidth={2}
-          maskColor="rgba(255, 255, 255, 0.75)"
-        />
+        <div className="hidden md:block">
+          <MiniMap
+            position="bottom-right"
+            nodeColor={(n: Node) => {
+              const d = n.data as { kind?: string; role?: string };
+              if (d.kind === "group" || n.type === "department")
+                return "#737373";
+              return ROLE_COLOR[(d.role as string) ?? ""] ?? "#a3a3a3";
+            }}
+            nodeStrokeWidth={2}
+            maskColor="rgba(255, 255, 255, 0.75)"
+          />
+        </div>
       </ReactFlow>
 
       {/* Search */}
-      <div className="absolute left-1/2 top-3 z-20 w-[340px] -translate-x-1/2 rounded-xl border border-neutral-200 bg-white/95 p-2 shadow-lg shadow-neutral-900/5 backdrop-blur">
+      <div className="absolute left-1/2 top-3 z-20 w-[min(340px,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-neutral-200 bg-white/95 p-2 shadow-lg shadow-neutral-900/5 backdrop-blur">
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
           <svg
             className="h-4 w-4 shrink-0 text-neutral-400"
@@ -677,6 +716,47 @@ function OrgTreeCanvas() {
               Search
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleToggleFullscreen}
+            aria-label={isFs ? "Exit fullscreen" : "Enter fullscreen"}
+            title={isFs ? "Exit fullscreen" : "Enter fullscreen"}
+            className="shrink-0 rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+          >
+            {isFs ? (
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M8 21v-3a2 2 0 0 0-2-2H3" />
+                <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+              </svg>
+            ) : (
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+              </svg>
+            )}
+          </button>
         </form>
         {searchActive && (
           <p className="mt-1.5 px-1 text-[10px] font-medium text-neutral-500">
@@ -687,85 +767,120 @@ function OrgTreeCanvas() {
         )}
       </div>
 
-      <div className="absolute left-3 top-3 z-10 w-[260px] rounded-xl border border-neutral-200 bg-white/95 p-3 shadow-lg shadow-neutral-900/5 backdrop-blur">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
-            Org tree
-          </p>
-          <p className="text-[11px] font-medium text-neutral-400">
-            {nodes.length} shown · {orgTree.employees.length} total
-          </p>
-        </div>
-
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={handleExpandAll}
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
-          >
-            Expand all
-          </button>
-          <button
-            type="button"
-            onClick={handleCollapseAll}
-            className="flex-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
-          >
-            Collapse all
-          </button>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-          {ROLE_LIST.map((role) => (
-            <span key={role} className="flex items-center gap-1.5">
-              <span
-                className="h-2 w-2 rounded-full"
-                style={{ backgroundColor: ROLE_COLOR[role] ?? "#a3a3a3" }}
-              />
-              <span className="text-[10px] font-medium text-neutral-500">
-                {ROLE_LABELS[role]}
-              </span>
-            </span>
-          ))}
-        </div>
-
-        {viewerIsAdmin && (
-          <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 rounded-lg bg-neutral-100 px-2 py-1.5">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-100 ring-1 ring-emerald-600/40" />
-              <span className="text-[10px] font-medium text-neutral-600">
-                active
-              </span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-100 ring-1 ring-amber-600/40" />
-              <span className="text-[10px] font-medium text-neutral-600">
-                invite sent
-              </span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-neutral-100 ring-1 ring-neutral-400/60" />
-              <span className="text-[10px] font-medium text-neutral-600">
-                needs invite
-              </span>
-            </span>
+      <div className="absolute left-3 top-[3.75rem] z-10 w-[min(260px,calc(100vw-2rem))] rounded-xl border border-neutral-200 bg-white/95 shadow-lg shadow-neutral-900/5 backdrop-blur lg:top-3">
+        <div className="flex items-center justify-between gap-2 p-3">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">
+              Org tree
+            </p>
+            <p className="truncate text-[11px] font-medium text-neutral-400">
+              {nodes.length} shown · {orgTree.employees.length} total
+            </p>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={() => setLegendOpen((v) => !v)}
+            aria-expanded={legendOpen}
+            aria-label={legendOpen ? "Collapse org tree panel" : "Expand org tree panel"}
+            className="shrink-0 rounded-md p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
+          >
+            <svg
+              className={cn(
+                "h-4 w-4 transition-transform duration-200",
+                legendOpen && "rotate-180",
+              )}
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m5 8 5 5 5-5" />
+            </svg>
+          </button>
+        </div>
 
-        <p
-          className={cn(
-            "mt-3 rounded-lg px-2 py-1.5 text-[10px] leading-snug text-neutral-400",
-            "bg-neutral-100",
+        <AnimatePresence initial={false}>
+          {legendOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: EASE }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-3 px-3 pb-3">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExpandAll}
+                    className="flex-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                  >
+                    Expand all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCollapseAll}
+                    className="flex-1 rounded-lg border border-neutral-300 bg-white px-2 py-1.5 text-xs font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"
+                  >
+                    Collapse all
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                  {ROLE_LIST.map((role) => (
+                    <span key={role} className="flex items-center gap-1.5">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: ROLE_COLOR[role] ?? "#a3a3a3" }}
+                      />
+                      <span className="text-[10px] font-medium text-neutral-500">
+                        {ROLE_LABELS[role]}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+
+                {viewerIsAdmin && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1.5 rounded-lg bg-neutral-100 px-2 py-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-100 ring-1 ring-emerald-600/40" />
+                      <span className="text-[10px] font-medium text-neutral-600">
+                        active
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-amber-100 ring-1 ring-amber-600/40" />
+                      <span className="text-[10px] font-medium text-neutral-600">
+                        invite sent
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-neutral-100 ring-1 ring-neutral-400/60" />
+                      <span className="text-[10px] font-medium text-neutral-600">
+                        needs invite
+                      </span>
+                    </span>
+                  </div>
+                )}
+
+                <p className="rounded-lg bg-neutral-100 px-2 py-1.5 text-[10px] leading-snug text-neutral-400">
+                  Department groups wrap people following reporting lines. Click
+                  any node to expand it and see its details; click again to
+                  collapse. Shift-click or shift-drag to select; drag to pan,
+                  scroll to zoom.
+                </p>
+              </div>
+            </motion.div>
           )}
-        >
-          Department groups wrap people following reporting lines. Click any
-          node to expand it and see its details; click again to collapse.
-          Shift-click or shift-drag to select; drag to pan, scroll to zoom.
-        </p>
+        </AnimatePresence>
       </div>
 
       {/* Batch invite bar */}
       {viewerIsAdmin && selectedIds.length > 0 && (
-        <div className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-neutral-200 bg-white/95 px-3.5 py-2.5 shadow-lg shadow-neutral-900/10 backdrop-blur">
+        <div className="absolute bottom-6 left-1/2 z-20 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-2.5 rounded-xl border border-neutral-200 bg-white/95 px-3.5 py-2.5 shadow-lg shadow-neutral-900/10 backdrop-blur sm:gap-3">
           <p className="text-xs font-semibold text-neutral-700">
             {selectedIds.length} selected
           </p>

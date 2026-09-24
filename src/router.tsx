@@ -126,6 +126,74 @@ const profileRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// /courses — Course creation & review (content_curator + architect)
+// ---------------------------------------------------------------------------
+
+const canManageCourses = (role: string | undefined) =>
+  role === "content_curator" || role === "architect";
+
+const courseRoleGuard = () => async ({ context }: { context: { user: { role: string } } }) => {
+  if (!canManageCourses(context.user.role)) {
+    throw redirect({ to: "/" });
+  }
+};
+
+const coursesRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/courses",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(() => import("./pages/CoursesPage"), "CoursesPage"),
+});
+
+const newCourseRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/courses/new",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseEditorPage"),
+    "CourseEditorPage",
+  ),
+});
+
+const editCourseRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/courses/$courseId/edit",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseEditorPage"),
+    "CourseEditorPage",
+  ),
+});
+
+const approvalsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/courses/approvals",
+  beforeLoad: async ({ context }) => {
+    if (context.user.role !== "architect") {
+      throw redirect({ to: "/" });
+    }
+  },
+  component: lazyRouteComponent(
+    () => import("./pages/CourseApprovalsPage"),
+    "CourseApprovalsPage",
+  ),
+});
+
+const reviewCourseRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/courses/approvals/$courseId",
+  beforeLoad: async ({ context }) => {
+    if (context.user.role !== "architect") {
+      throw redirect({ to: "/" });
+    }
+  },
+  component: lazyRouteComponent(
+    () => import("./pages/CourseReviewPage"),
+    "CourseReviewPage",
+  ),
+});
+
+// ---------------------------------------------------------------------------
 // /connect-hrms — Mandatory post-signup HRMS connection
 // ---------------------------------------------------------------------------
 
@@ -200,7 +268,15 @@ const acceptRoute = createRoute({
 // ---------------------------------------------------------------------------
 
 const routeTree = rootRoute.addChildren([
-  protectedRoute.addChildren([indexRoute, profileRoute]),
+  protectedRoute.addChildren([
+    indexRoute,
+    profileRoute,
+    coursesRoute,
+    newCourseRoute,
+    editCourseRoute,
+    approvalsRoute,
+    reviewCourseRoute,
+  ]),
   connectHrmsRoute,
   loginRoute,
   signupRoute,
