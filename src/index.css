@@ -24,9 +24,7 @@ body {
 }
 
 img,
-svg,
-video,
-canvas {
+video {
   max-width: 100%;
 }
 
@@ -85,4 +83,11 @@ a[aria-disabled="true"] {
 .react-flow__node-department:focus-visible,
 .react-flow__node-department.selected {
   box-shadow: none !important;
+}
+
+/* Ensure org-tree edges are always painted, regardless of global
+   svg/media styles leaking into the edge viewport. */
+.org-flow .react-flow__edge-path {
+  stroke: #a3a3a3;
+  stroke-width: 1.5;
 }
