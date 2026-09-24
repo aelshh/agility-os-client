@@ -10,10 +10,10 @@ const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_S = 60;
 
 const otpInputClasses =
-  "w-12 h-14 text-center text-lg font-semibold rounded-xl border border-neutral-300 bg-neutral-50/70 text-neutral-950 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
+  "h-14 min-w-0 max-w-12 flex-1 text-center text-lg font-semibold rounded-xl border border-neutral-300 bg-neutral-50/70 text-neutral-950 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
 
 const otpInputCompactClasses =
-  "w-9 h-11 text-center text-base font-semibold rounded-lg border border-neutral-300 bg-neutral-50/70 text-neutral-950 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
+  "h-11 min-w-0 max-w-9 flex-1 text-center text-base font-semibold rounded-lg border border-neutral-300 bg-neutral-50/70 text-neutral-950 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
 
 type OtpInputProps = {
   email: string;

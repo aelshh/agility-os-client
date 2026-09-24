@@ -20,11 +20,27 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   text-rendering: optimizeLegibility;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 ::selection {
   background-color: #171717;
   color: #ffffff;
+}
+
+/* Dynamic viewport height so bashful mobile browser chrome never
+   overlaps an app that relies on h-full / h-screen. */
+@supports (height: 100dvh) {
+  .h-dvh {
+    height: 100dvh;
+  }
 }
 
 button,
