@@ -15,6 +15,7 @@ import { AppShell } from "./components/AppShell";
 import { AuthProvider } from "./features/auth";
 import { LoadingPage } from "./pages/LoadingPage";
 import { apiGetProfile } from "./api/profile";
+
 import type { AuthErrorPayload } from "./features/auth";
 import { Button } from "./components";
 
@@ -194,6 +195,26 @@ const reviewCourseRoute = createRoute({
 });
 
 // ---------------------------------------------------------------------------
+// /checkins — Daily check-ins (non-practitioners only)
+// ---------------------------------------------------------------------------
+
+const checkinRoleGuard = () => ({ context }: { context: { user: { role: string } } }) => {
+  if (context.user.role === "practitioner") {
+    throw redirect({ to: "/" });
+  }
+};
+
+const checkinsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/checkins",
+  beforeLoad: checkinRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/DailyCheckinsPage"),
+    "DailyCheckinsPage",
+  ),
+});
+
+// ---------------------------------------------------------------------------
 // /connect-hrms — Mandatory post-signup HRMS connection
 // ---------------------------------------------------------------------------
 
@@ -276,6 +297,7 @@ const routeTree = rootRoute.addChildren([
     editCourseRoute,
     approvalsRoute,
     reviewCourseRoute,
+    checkinsRoute,
   ]),
   connectHrmsRoute,
   loginRoute,

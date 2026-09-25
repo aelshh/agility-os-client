@@ -89,6 +89,16 @@ function ApprovalsIcon() {
   );
 }
 
+function CheckinsIcon() {
+  return (
+    <Icon>
+      <path d="M12 8v4l3 3" />
+      <path d="M21 12a9 9 0 1 1-3.52-7.07" />
+      <path d="M21 3v5h-5" />
+    </Icon>
+  );
+}
+
 function SignOutIcon() {
   return (
     <Icon>
@@ -300,6 +310,13 @@ export function AppShell() {
       to: "/courses/approvals",
       label: "Approvals",
       icon: <ApprovalsIcon />,
+    });
+  }
+  if (user?.role && user.role !== "practitioner") {
+    navItems.push({
+      to: "/checkins",
+      label: "Check-ins",
+      icon: <CheckinsIcon />,
     });
   }
 

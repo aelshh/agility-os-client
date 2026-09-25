@@ -12,10 +12,20 @@ import type { AuthErrorPayload } from "../features/auth/auth-context";
 
 export type CourseStatus = "draft" | "pending_review" | "published" | "rejected";
 
+export type ProvisioningStatus = "none" | "provisioning" | "completed" | "failed";
+
 export type RubricCriterion = {
   name: string;
   weight: number;
   description?: string;
+};
+
+export type CourseDeliverySummary = {
+  selected: number;
+  called: number;
+  completed: number;
+  scored: number;
+  avgScore: number | null;
 };
 
 export type CourseDocument = {
@@ -44,6 +54,12 @@ export type Course = {
   roleScope: string[];
   expiresAt: string | null;
   status: CourseStatus;
+  telenowAgentId: string | null;
+  telenowCampaignId: string | null;
+  provisioningStatus: ProvisioningStatus;
+  provisioningError: string | null;
+  audienceIds: string[];
+  delivery: CourseDeliverySummary;
   createdBy: string;
   createdByName: string | null;
   reviewedBy: string | null;
@@ -66,6 +82,29 @@ export type CourseInput = {
   regionScope?: string[];
   roleScope?: string[];
   expiresAt?: string | null;
+  audienceIds?: string[];
+};
+
+export type CourseEnrollmentStatus =
+  | "pending"
+  | "queued"
+  | "calling"
+  | "answered"
+  | "no_answer"
+  | "completed"
+  | "failed"
+  | "skipped";
+
+export type CourseEnrollment = {
+  id: string;
+  userId: string;
+  userName: string | null;
+  userPhone: string | null;
+  status: CourseEnrollmentStatus;
+  score: number | null;
+  calledAt: string | null;
+  completedAt: string | null;
+  recordingUrl: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -169,6 +208,47 @@ export async function apiRejectCourse(
     ),
   );
   return data.course;
+}
+
+export async function apiGetCourseEnrollments(
+  id: string,
+): Promise<CourseEnrollment[]> {
+  const data = await unwrap<{ enrollments: CourseEnrollment[] }>(
+    await fetch(`/api/drills/${encodeURIComponent(id)}/enrollments`, {
+      credentials: "include",
+    }),
+  );
+  return data.enrollments;
+}
+
+export async function apiProvisionCourse(id: string): Promise<Course> {
+  const data = await unwrap<{ course: Course }>(
+    await jsonRequest(
+      `/api/drills/${encodeURIComponent(id)}/provision`,
+      "POST",
+      {},
+    ),
+  );
+  return data.course;
+}
+
+export type UpdateAudienceResult = {
+  course: Course;
+  added: number;
+  provisioned: boolean | null;
+};
+
+export async function apiUpdateCourseAudience(
+  id: string,
+  audienceIds: string[],
+): Promise<UpdateAudienceResult> {
+  return unwrap<UpdateAudienceResult>(
+    await jsonRequest(
+      `/api/drills/${encodeURIComponent(id)}/audience`,
+      "PUT",
+      { audienceIds },
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------

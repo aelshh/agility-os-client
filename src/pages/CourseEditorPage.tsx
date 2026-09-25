@@ -13,9 +13,11 @@ import {
   apiGetCourse,
   apiSubmitCourse,
   apiUpdateCourse,
+  apiUpdateCourseAudience,
   apiUploadCourseDocument,
 } from "../api/courses";
 import { Button, Spinner, Tabs } from "../components";
+import { AudiencePicker } from "../features/courses/AudiencePicker";
 import { RubricList } from "../features/courses/RubricList";
 import { StatusBadge } from "../features/courses/StatusBadge";
 import { cn } from "../lib/cn";
@@ -52,7 +54,7 @@ function isTextDoc(file: File): boolean {
   return TEXT_DOC_EXTS.has(ext) || file.type.startsWith("text/");
 }
 
-const EDITOR_TABS = ["basics", "material", "questions", "rubric"];
+const EDITOR_TABS = ["basics", "material", "questions", "rubric", "audience"];
 
 let rubricIdCounter = 0;
 const nextRubricId = () => `rc-${rubricIdCounter++}`;
@@ -138,6 +140,9 @@ export function CourseEditorPage() {
   const [maxDurationSec, setMaxDurationSec] = useState("120");
   const [isMandatory, setIsMandatory] = useState(false);
   const [expiresAt, setExpiresAt] = useState("");
+  const [audienceIds, setAudienceIds] = useState<string[]>([]);
+  const [draftAudience, setDraftAudience] = useState<string[] | null>(null);
+  const [savingAudience, setSavingAudience] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -159,6 +164,8 @@ export function CourseEditorPage() {
         setMaxDurationSec(String(course.maxDurationSec));
         setIsMandatory(course.isMandatory);
         setExpiresAt(course.expiresAt ? course.expiresAt.slice(0, 16) : "");
+        setAudienceIds(Array.isArray(course.audienceIds) ? course.audienceIds : []);
+        setDraftAudience(null);
       })
       .catch(() => {
         if (cancelled) return;
@@ -182,6 +189,11 @@ export function CourseEditorPage() {
   );
 
   const totalWeight = criteria.reduce((sum, c) => sum + c.weight, 0);
+
+  const isPublished = loaded?.status === "published";
+  const audienceDirty = isPublished && draftAudience !== null;
+  const effectiveAudience =
+    draftAudience !== null ? draftAudience : audienceIds;
 
   const hasKnowledge =
     knowledgeText.trim().length > 0 || documents.length > 0 || pendingFiles.length > 0;
@@ -389,6 +401,7 @@ export function CourseEditorPage() {
     };
     if (expiresAt.trim()) input.expiresAt = new Date(expiresAt).toISOString();
     else input.expiresAt = null;
+    input.audienceIds = audienceIds;
     return { ok: true, input };
   };
 
@@ -471,6 +484,40 @@ export function CourseEditorPage() {
     void runSubmit();
   };
 
+  const runSaveAudience = async () => {
+    if (!courseId || !loaded || !audienceDirty || draftAudience === null) return;
+    setSavingAudience(true);
+    try {
+      const result = await apiUpdateCourseAudience(courseId, draftAudience);
+      setLoaded(result.course);
+      setAudienceIds(
+        Array.isArray(result.course.audienceIds) ? result.course.audienceIds : [],
+      );
+      setDraftAudience(null);
+      const count = result.added;
+      if (count === 0) {
+        toast.success("Audience saved.");
+      } else if (result.provisioned) {
+        toast.success(
+          `${count} practitioner${count === 1 ? "" : "s"} added — practice calls are being set up.`,
+        );
+      } else {
+        toast.success(
+          `${count} practitioner${count === 1 ? "" : "s"} added — saved, calls will start on the next provisioning run.`,
+        );
+      }
+    } catch (err) {
+      const message =
+        (err as { message?: string })?.message ??
+        "Couldn't save the audience.";
+      toast.error(message);
+    } finally {
+      setSavingAudience(false);
+    }
+  };
+
+  const discardAudience = () => setDraftAudience(null);
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-neutral-50">
@@ -549,6 +596,7 @@ export function CourseEditorPage() {
             },
             { id: "questions", label: "Practice questions", count: faqs.length },
             { id: "rubric", label: "Scoring rubric" },
+            { id: "audience", label: "Audience", count: effectiveAudience.length },
           ]}
           active={activeTab}
           onChange={setActiveTab}
@@ -974,6 +1022,70 @@ export function CourseEditorPage() {
                 )}
               </div>
             </div>
+          )}
+        </SectionCard>
+        )}
+
+        {activeTab === "audience" && (
+        <SectionCard
+          title="Audience"
+          description={
+            isPublished
+              ? "Update who receives practice calls for this live course. Newly added practitioners are dialed when no campaign has started yet."
+              : "Pick the practitioners who practise this course. When it's approved, a coach call is scheduled for each selected practitioner."
+          }
+        >
+          <AudiencePicker
+            selected={effectiveAudience}
+            onChange={isPublished ? setDraftAudience : setAudienceIds}
+            disabled={readOnly && !isPublished}
+          />
+
+          {isPublished && (
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  loading={savingAudience}
+                  disabled={!audienceDirty}
+                  onClick={runSaveAudience}
+                >
+                  Save audience
+                </Button>
+                {audienceDirty && (
+                  <Button variant="ghost" onClick={discardAudience}>
+                    Discard
+                  </Button>
+                )}
+              </div>
+
+              {loaded?.provisioningError && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-800">
+                  Last call setup failed: {loaded.provisioningError} An architect
+                  can retry it from the course review page.
+                </p>
+              )}
+              {loaded?.provisioningStatus === "completed" &&
+                !loaded.provisioningError && (
+                  <p className="text-xs leading-relaxed text-neutral-500">
+                    Calls for this course are live. Newly added practitioners are
+                    saved and will be dialed on the next provisioning run.
+                  </p>
+                )}
+              {loaded?.provisioningStatus === "none" && (
+                <p className="text-xs leading-relaxed text-neutral-500">
+                  No calls have been started for this course yet — they kick off
+                  as soon as you save a selection.
+                </p>
+              )}
+            </div>
+          )}
+
+          {!readOnly && audienceIds.length === 0 && (
+            <p className="text-xs leading-relaxed text-neutral-500">
+              You can submit for review without an audience. Calls only start
+              once at least one practitioner is selected here.
+            </p>
           )}
         </SectionCard>
         )}

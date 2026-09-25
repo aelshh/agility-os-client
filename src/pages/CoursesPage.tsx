@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { apiListCourses, apiSubmitCourse } from "../api/courses";
 import type { Course } from "../api/courses";
+import { apiGetTelenowStatus } from "../api/telenow";
 import { Button, Spinner } from "../components";
 import { useAuth } from "../features/auth";
 import { StatusBadge } from "../features/courses/StatusBadge";
@@ -17,6 +18,7 @@ export function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [telenowConfigured, setTelenowConfigured] = useState<boolean | null>(null);
 
   const isArchitect = user?.role === "architect";
 
@@ -30,7 +32,12 @@ export function CoursesPage() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    if (isArchitect) {
+      apiGetTelenowStatus()
+        .then((s) => setTelenowConfigured(s.configured))
+        .catch(() => setTelenowConfigured(false));
+    }
+  }, [load, isArchitect]);
 
   const handleSubmit = async (course: Course) => {
     setSubmittingId(course.id);
@@ -93,7 +100,18 @@ export function CoursesPage() {
               </Button>
             )}
             <Button
-              onClick={() => void router.navigate({ to: "/courses/new" })}
+              onClick={() => {
+                if (telenowConfigured === false) {
+                  if (isArchitect) {
+                    toast.error("Please connect your Telenow API key in Settings before creating courses.");
+                    void router.navigate({ to: "/profile" });
+                  } else {
+                    toast.error("Your organisation must connect Telenow Voice AI before creating courses. Please contact an architect.");
+                  }
+                  return;
+                }
+                void router.navigate({ to: "/courses/new" });
+              }}
               icon={
                 <svg
                   viewBox="0 0 20 20"
@@ -112,6 +130,35 @@ export function CoursesPage() {
             </Button>
           </div>
         </motion.div>
+
+        {telenowConfigured === false && (
+          <motion.div
+            variants={fadeUp}
+            className="flex w-full flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 p-4 text-sm text-amber-900 shadow-sm"
+          >
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-200 font-bold text-xs text-amber-900">
+                !
+              </span>
+              <div>
+                <p className="font-semibold text-amber-950">Voice AI Integration Required</p>
+                <p className="mt-0.5 text-xs text-amber-800 leading-relaxed">
+                  Telenow Voice AI is not connected for your organisation. An API key must be configured in Settings before voice courses can be created or practice calls placed.
+                </p>
+              </div>
+            </div>
+            {isArchitect && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-amber-300 bg-white hover:bg-amber-100/50 text-amber-950"
+                onClick={() => void router.navigate({ to: "/profile" })}
+              >
+                Configure in Settings
+              </Button>
+            )}
+          </motion.div>
+        )}
 
         {courses === null ? (
           <div className="flex w-full items-center justify-center py-24">
@@ -191,6 +238,31 @@ export function CoursesPage() {
                   <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-700">
                     <span className="font-semibold">Rejected:</span>{" "}
                     {course.reviewComment}
+                  </div>
+                )}
+
+                {course.status === "published" && (
+                  <div
+                    className={`mt-4 rounded-xl border px-3 py-2 text-xs leading-relaxed ${
+                      course.provisioningStatus === "failed"
+                        ? "border-red-200 bg-red-50 text-red-700"
+                        : course.provisioningStatus === "provisioning"
+                          ? "border-sky-200 bg-sky-50 text-sky-700"
+                          : "border-neutral-200 bg-neutral-50 text-neutral-700"
+                    }`}
+                  >
+                    {course.provisioningStatus === "failed" && (
+                      <span className="font-semibold">Setup failed — </span>
+                    )}
+                    {course.provisioningStatus === "provisioning" && (
+                      <span className="font-semibold">Setting up calls… </span>
+                    )}
+                    {course.delivery.selected} selected ·{" "}
+                    {course.delivery.called} called · {course.delivery.completed}{" "}
+                    completed · avg{" "}
+                    {course.delivery.avgScore === null
+                      ? "—"
+                      : `${course.delivery.avgScore}%`}
                   </div>
                 )}
 
