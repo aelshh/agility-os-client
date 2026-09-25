@@ -6,15 +6,30 @@ import { toast } from "sonner";
 import {
   apiApproveCourse,
   apiGetCourse,
+  apiGetCourseEnrollments,
+  apiProvisionCourse,
   apiRejectCourse,
 } from "../api/courses";
-import type { Course } from "../api/courses";
+import type { Course, CourseEnrollment } from "../api/courses";
 import { Button, Spinner, Tabs } from "../components";
+import { DeliverySummary } from "../features/courses/DeliverySummary";
 import { RubricList } from "../features/courses/RubricList";
 import { StatusBadge } from "../features/courses/StatusBadge";
+import { cn } from "../lib/cn";
 import { pageVariants, fadeUp } from "../lib/animation";
 
 const detailLabel = "text-sm font-medium text-neutral-600";
+
+const ENROLLMENT_TONE: Record<CourseEnrollment["status"], string> = {
+  completed: "bg-emerald-500",
+  answered: "bg-sky-500",
+  no_answer: "bg-neutral-400",
+  pending: "bg-neutral-300",
+  queued: "bg-amber-400",
+  calling: "bg-amber-500",
+  failed: "bg-red-500",
+  skipped: "bg-neutral-200",
+};
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -32,7 +47,25 @@ export function CourseReviewPage() {
   const [reviewTab, setReviewTab] = useState("overview");
   const [rejectOpen, setRejectOpen] = useState(false);
   const [comment, setComment] = useState("");
-  const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
+  const [busy, setBusy] = useState<"approve" | "reject" | "retry" | null>(null);
+  const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
+  const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
+
+  const handleRetry = async () => {
+    if (!course) return;
+    setBusy("retry");
+    try {
+      const refreshed = await apiProvisionCourse(course.id);
+      setCourse(refreshed);
+      toast.success("Setup retried — check the delivery status below.");
+    } catch (err) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Couldn't retry setup.",
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
 
   useEffect(() => {
     if (!courseId) {
@@ -45,6 +78,22 @@ export function CourseReviewPage() {
         if (cancelled) return;
         setCourse(loaded);
         setReviewTab("overview");
+        if (loaded.status === "published") {
+          setEnrollmentsLoading(true);
+          return apiGetCourseEnrollments(loaded.id)
+            .then((rows) => {
+              if (cancelled) return;
+              setEnrollments(rows);
+            })
+            .catch(() => {
+              if (cancelled) return;
+              setEnrollments([]);
+            })
+            .finally(() => {
+              if (!cancelled) setEnrollmentsLoading(false);
+            });
+        }
+        return undefined;
       })
       .catch(() => {
         if (cancelled) return;
@@ -170,16 +219,75 @@ export function CourseReviewPage() {
 
         {reviewTab === "overview" && (
           <div className="flex flex-col gap-4">
+            <DeliverySummary
+              course={course}
+              onRetry={course.provisioningStatus === "failed" ? handleRetry : undefined}
+              retrying={busy === "retry"}
+            />
             <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-              <p className={detailLabel}>Delivery</p>
+              <p className={detailLabel}>Details</p>
               <p className="text-sm text-neutral-700">
-                {course.maxDurationSec}s limit ·{" "}
+                {course.maxDurationSec}s call limit ·{" "}
                 {course.isMandatory ? "mandatory" : "optional"} · created by{" "}
                 <span className="font-medium text-neutral-900">
                   {course.createdByName ?? "Unknown"}
                 </span>
               </p>
             </section>
+
+            {course.status === "published" && (
+              <section className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                <p className={detailLabel}>
+                  Practitioner results
+                  {enrollmentsLoading && (
+                    <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-neutral-400">
+                      <Spinner size="sm" className="text-neutral-400" />
+                      loading…
+                    </span>
+                  )}
+                </p>
+                {enrollments.length === 0 && !enrollmentsLoading ? (
+                  <p className="text-sm text-neutral-500">
+                    No practitioners were enrolled for this course.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-1">
+                    {enrollments.map((enrollment) => (
+                      <li
+                        key={enrollment.id}
+                        className="flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "h-2.5 w-2.5 shrink-0 rounded-full",
+                            ENROLLMENT_TONE[enrollment.status],
+                          )}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900">
+                          {enrollment.userName ?? "Unnamed"}
+                        </span>
+                        <span className="hidden text-xs capitalize text-neutral-500 sm:block">
+                          {enrollment.status.replace("_", " ")}
+                        </span>
+                        <span
+                          className={cn(
+                            "shrink-0 text-sm font-semibold tabular-nums",
+                            enrollment.score === null
+                              ? "text-neutral-300"
+                              : "text-neutral-950",
+                          )}
+                        >
+                          {enrollment.score === null
+                            ? "—"
+                            : `${enrollment.score}%`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
           </div>
         )}
 

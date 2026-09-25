@@ -108,6 +108,12 @@ export function CourseApprovalsPage() {
                         ? `${course.docs.length} ${course.docs.length === 1 ? "document" : "documents"}`
                         : "No material yet"}
                   </span>
+                  {(course.audienceIds?.length ?? 0) > 0 && (
+                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                      {course.audienceIds.length} practitioner
+                      {course.audienceIds.length === 1 ? "" : "s"} selected
+                    </span>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   <p className={metaClasses}>

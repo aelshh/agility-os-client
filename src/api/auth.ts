@@ -18,6 +18,8 @@ export type PublicOrg = {
   timezone: string;
   language: string;
   defaultRegion: string;
+  telenowConfigured?: boolean;
+  telenowConnectedAt?: string | null;
 };
 
 export type OrgBootstrapPayload = {

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useLoaderData } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -11,6 +11,12 @@ import { useAuth } from "../features/auth";
 import type { AuthErrorPayload } from "../features/auth";
 import type { ProfileData } from "../api/profile";
 import { apiChangePassword, apiUpdateProfile } from "../api/profile";
+import {
+  apiGetTelenowStatus,
+  apiSaveTelenowKey,
+  apiDisconnectTelenow,
+  type TelenowIntegrationStatus,
+} from "../api/telenow";
 import { pageVariants, fadeUp, EASE } from "../lib/animation";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -167,10 +173,76 @@ export function ProfilePage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
+  // Telenow integration state (for architects)
+  const [telenowStatus, setTelenowStatus] = useState<TelenowIntegrationStatus | null>(null);
+  const [telenowLoading, setTelenowLoading] = useState(false);
+  const [telenowModalOpen, setTelenowModalOpen] = useState(false);
+  const [telenowApiKeyInput, setTelenowApiKeyInput] = useState("");
+  const [telenowSaving, setTelenowSaving] = useState(false);
+  const [telenowError, setTelenowError] = useState<string | null>(null);
+  const [telenowDisconnecting, setTelenowDisconnecting] = useState(false);
+
   const user = data.user;
   const roleLabel = user?.role ? (ROLE_LABELS[user.role] ?? user.role) : "";
   const orgName = data?.org?.name;
   const canEditPassword = data?.signInMethod === "password";
+
+  useEffect(() => {
+    if (user?.role === "architect") {
+      setTelenowLoading(true);
+      apiGetTelenowStatus()
+        .then((status) => setTelenowStatus(status))
+        .catch((err) => console.error("Failed to load Telenow status:", err))
+        .finally(() => setTelenowLoading(false));
+    }
+  }, [user?.role]);
+
+  async function handleTelenowSave(e: FormEvent) {
+    e.preventDefault();
+    if (!telenowApiKeyInput.trim()) {
+      setTelenowError("API key cannot be empty.");
+      return;
+    }
+    setTelenowSaving(true);
+    setTelenowError(null);
+    try {
+      const res = await apiSaveTelenowKey(telenowApiKeyInput.trim());
+      setTelenowStatus(res);
+      toast.success("Telenow Voice AI connected successfully!");
+      setTelenowModalOpen(false);
+      setTelenowApiKeyInput("");
+    } catch (err) {
+      setTelenowError((err as Error).message || "Failed to connect API key.");
+    } finally {
+      setTelenowSaving(false);
+    }
+  }
+
+  async function handleTelenowDisconnect() {
+    if (
+      !window.confirm(
+        "Are you sure you want to disconnect Telenow Voice AI? Courses and daily check-ins cannot be run without an active integration.",
+      )
+    ) {
+      return;
+    }
+    setTelenowDisconnecting(true);
+    try {
+      await apiDisconnectTelenow();
+      setTelenowStatus({
+        configured: false,
+        maskedKey: null,
+        telenowOrgId: null,
+        connectedAt: null,
+        webhookRegistered: false,
+      });
+      toast.success("Telenow integration disconnected.");
+    } catch (err) {
+      toast.error((err as Error).message || "Failed to disconnect.");
+    } finally {
+      setTelenowDisconnecting(false);
+    }
+  }
 
   function startEditing() {
     if (!user) return;
@@ -547,6 +619,105 @@ export function ProfilePage() {
         </Card>
       </motion.div>
 
+      {/* ── Voice AI (Telenow) — Architect only ── */}
+      {user?.role === "architect" && (
+        <motion.div variants={fadeUp} className="w-full">
+          <Card
+            title="Voice AI integration (Telenow)"
+            action={
+              telenowStatus?.configured ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setTelenowApiKeyInput("");
+                      setTelenowError(null);
+                      setTelenowModalOpen(true);
+                    }}
+                  >
+                    Update key
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={telenowDisconnecting}
+                    onClick={handleTelenowDisconnect}
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setTelenowApiKeyInput("");
+                    setTelenowError(null);
+                    setTelenowModalOpen(true);
+                  }}
+                >
+                  Connect Telenow
+                </Button>
+              )
+            }
+          >
+            {telenowLoading ? (
+              <p className="py-2 text-sm text-neutral-500">Loading integration status…</p>
+            ) : telenowStatus?.configured ? (
+              <div className="divide-y divide-neutral-100">
+                <InfoRow
+                  label="Status"
+                  value={
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Connected
+                    </span>
+                  }
+                />
+                <InfoRow
+                  label="API key"
+                  value={
+                    <code className="rounded bg-neutral-100 px-1.5 py-0.5 font-mono text-xs text-neutral-800">
+                      {telenowStatus.maskedKey}
+                    </code>
+                  }
+                />
+                <InfoRow label="Workspace ID" value={telenowStatus.telenowOrgId} />
+                <InfoRow
+                  label="Connected at"
+                  value={formatDate(telenowStatus.connectedAt)}
+                />
+                <InfoRow
+                  label="Webhook endpoint"
+                  value={
+                    telenowStatus.webhookRegistered ? (
+                      <span className="text-xs font-medium text-emerald-600">
+                        Registered & active
+                      </span>
+                    ) : (
+                      <span className="text-xs font-medium text-amber-600">
+                        Pending registration
+                      </span>
+                    )
+                  }
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 py-1">
+                <p className="text-sm leading-relaxed text-neutral-600">
+                  Telenow powers voice deliberate practice drills, AI roleplay personas, and automated daily check-in calls. Connect your organization&apos;s Telenow API key to activate voice calling for your practitioners.
+                </p>
+                <div className="flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50/80 p-3 text-xs text-amber-800">
+                  <span className="shrink-0 font-semibold">Required:</span>
+                  <span>Courses and daily check-ins require an active Telenow API key before they can be created or run.</span>
+                </div>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
       {/* ── Change password modal ── */}
       <Modal
         open={passwordOpen}
@@ -605,6 +776,48 @@ export function ProfilePage() {
             </Button>
             <Button type="submit" loading={passwordSubmitting}>
               Update password
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Telenow API key modal ── */}
+      <Modal
+        open={telenowModalOpen}
+        onClose={() => setTelenowModalOpen(false)}
+        title={telenowStatus?.configured ? "Update Telenow API key" : "Connect Telenow Voice AI"}
+        description="Enter your organization's Telenow API key. You can find this in the Telenow Console under Developers → API Keys."
+      >
+        <form onSubmit={handleTelenowSave} noValidate className="flex flex-col gap-4">
+          <Field label="Telenow API key" error={telenowError ?? undefined}>
+            <input
+              type="password"
+              value={telenowApiKeyInput}
+              onChange={(e) => {
+                setTelenowApiKeyInput(e.target.value);
+                setTelenowError(null);
+              }}
+              placeholder="vai_live_..."
+              autoComplete="off"
+              className={inputClasses}
+            />
+          </Field>
+
+          <p className="text-xs text-neutral-500">
+            Keys are encrypted with AES-256-GCM at rest. When connected, AgilityOS automatically verifies credentials with Telenow and registers a secure webhook endpoint for call events.
+          </p>
+
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setTelenowModalOpen(false)}
+              disabled={telenowSaving}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" loading={telenowSaving}>
+              {telenowStatus?.configured ? "Save & update key" : "Validate & connect"}
             </Button>
           </div>
         </form>
