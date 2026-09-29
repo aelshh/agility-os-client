@@ -8,3 +8,6 @@ export type { DropdownOption, DropdownProps } from "./Dropdown";
 export { Modal } from "./ui/Modal";
 export { Tabs } from "./ui/Tabs";
 export type { TabItem } from "./ui/Tabs";
+export { AudioPlayer } from "./AudioPlayer";
+export type { AudioPlayerProps } from "./AudioPlayer";
+

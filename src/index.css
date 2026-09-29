@@ -2,7 +2,7 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: Georgia, "Times New Roman", serif;
+  --font-serif: "Inter Display", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 html {

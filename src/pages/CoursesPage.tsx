@@ -212,10 +212,9 @@ export function CoursesPage() {
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {(course.faqs?.length ?? 0) > 0 ? (
-                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
-                      {course.faqs.length}{" "}
-                      {course.faqs.length === 1 ? "question" : "questions"}
+                  {course.telenowKbId ? (
+                    <span className="rounded-lg bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+                      Knowledge base
                     </span>
                   ) : (course.docs?.length ?? 0) > 0 ? (
                     <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
@@ -225,6 +224,12 @@ export function CoursesPage() {
                   ) : (
                     <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
                       No material yet
+                    </span>
+                  )}
+                  {(course.faqs?.length ?? 0) > 0 && (
+                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                      {course.faqs.length}{" "}
+                      {course.faqs.length === 1 ? "question" : "questions"}
                     </span>
                   )}
                   {course.knowledgeText?.trim() && (
@@ -270,8 +275,34 @@ export function CoursesPage() {
                   <p className={metaLabel}>
                     by {course.createdByName ?? "Unknown"}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    {canActOn(course) && editable(course) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {course.status === "published" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            void router.navigate({
+                              to: "/courses/approvals/$courseId",
+                              params: { courseId: course.id },
+                            })
+                          }
+                        >
+                          Analytics & Scorecards
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            void router.navigate({
+                              to: "/courses/$courseId/edit",
+                              params: { courseId: course.id },
+                            })
+                          }
+                        >
+                          Audience & Setup
+                        </Button>
+                      </>
+                    ) : canActOn(course) && editable(course) ? (
                       <>
                         <Button
                           size="sm"
@@ -293,8 +324,7 @@ export function CoursesPage() {
                           Submit for review
                         </Button>
                       </>
-                    )}
-                    {(!canActOn(course) || !editable(course)) && (
+                    ) : (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -305,7 +335,7 @@ export function CoursesPage() {
                           })
                         }
                       >
-                        View
+                        View Details
                       </Button>
                     )}
                   </div>

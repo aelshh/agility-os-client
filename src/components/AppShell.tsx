@@ -226,6 +226,47 @@ function Avatar({ user }: { user: AuthUser | null }) {
   );
 }
 
+function IntegrationsCard({ expanded }: { expanded: boolean }) {
+  if (!expanded) {
+    return (
+      <div className="px-2 pb-2">
+        <Link
+          to="/integrations"
+          title="Integrations"
+          className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200/60 bg-neutral-50 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-3">
+      <Link
+        to="/integrations"
+        className="group flex items-center gap-3 overflow-hidden rounded-xl border border-neutral-200/60 bg-neutral-50 p-2 transition-all hover:border-neutral-300 hover:bg-neutral-100/80"
+      >
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200/50 bg-white text-neutral-500 transition-colors group-hover:text-neutral-700">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+          </svg>
+        </div>
+        <div className="flex min-w-0 flex-col">
+          <span className="truncate text-sm font-medium text-neutral-700 group-hover:text-neutral-950">
+            Integrations
+          </span>
+          <span className="truncate text-[11px] font-medium text-neutral-500">
+            Voice & Telephony
+          </span>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
 function UserFooter({
   user,
   expanded,
@@ -304,6 +345,7 @@ export function AppShell() {
   ];
   if (user?.role === "content_curator" || user?.role === "architect") {
     navItems.push({ to: "/courses", label: "Courses", icon: <CoursesIcon /> });
+    navItems.push({ to: "/calls", label: "Call Logs", icon: <CheckinsIcon /> });
   }
   if (user?.role === "architect") {
     navItems.push({
@@ -399,6 +441,9 @@ export function AppShell() {
         </nav>
 
         <div className="mt-auto">
+          {user?.role === "architect" && (
+            <IntegrationsCard expanded={expanded} />
+          )}
           <UserFooter user={user} expanded={expanded} signOut={signOut} />
         </div>
       </motion.aside>
@@ -475,6 +520,9 @@ export function AppShell() {
               </nav>
 
               <div className="mt-auto">
+                {user?.role === "architect" && (
+                  <IntegrationsCard expanded={true} />
+                )}
                 <UserFooter
                   user={user}
                   expanded
