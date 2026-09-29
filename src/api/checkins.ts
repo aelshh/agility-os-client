@@ -41,6 +41,10 @@ export type CheckinSchedule = {
   enabled: boolean;
   questionScript: string;
   telenowAgentId: string | null;
+  voice?: string | null;
+  voiceProvider?: string | null;
+  phoneNumberId?: string | null;
+  phoneNumber?: string | null;
   createdAt: string;
   updatedAt: string;
   /** People currently reporting to the owner in the org graph. */
@@ -48,6 +52,7 @@ export type CheckinSchedule = {
   /** Subset of direct reports who can actually be called (active + phone). */
   callableCount: number;
   todayRunStatus: CheckinRunStatus | null;
+  additionalUserIds?: string[];
 };
 
 export type CheckinScheduleList = {
@@ -102,6 +107,11 @@ export type CreateCheckinScheduleInput = {
   title: string;
   timeLocal: string;
   questionScript?: string;
+  additionalUserIds?: string[];
+  voice?: string | null;
+  voiceProvider?: string | null;
+  phoneNumberId?: string | null;
+  phoneNumber?: string | null;
 };
 
 export type UpdateCheckinScheduleInput = {
@@ -109,6 +119,11 @@ export type UpdateCheckinScheduleInput = {
   timeLocal?: string;
   questionScript?: string;
   enabled?: boolean;
+  additionalUserIds?: string[];
+  voice?: string | null;
+  voiceProvider?: string | null;
+  phoneNumberId?: string | null;
+  phoneNumber?: string | null;
 };
 
 type ApiResponse = Record<string, unknown>;
@@ -161,6 +176,14 @@ export async function apiUpdateCheckinSchedule(
     body: JSON.stringify(input),
   });
   return unwrap<{ schedule: CheckinSchedule }>(res, await parseJson(res));
+}
+
+export async function apiDeleteCheckinSchedule(id: string): Promise<void> {
+  const res = await fetch(`/api/checkins/schedule/${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw await parseJson(res);
 }
 
 // ---------------------------------------------------------------------------
