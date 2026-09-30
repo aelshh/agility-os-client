@@ -20,6 +20,8 @@ import {
   apiDeleteCourseKbDoc,
   apiGenerateFaqs,
   apiGenerateFaqsDraft,
+  apiGenerateRubric,
+  apiGenerateRubricDraft,
   apiGetCourse,
   apiGetCourseKnowledgeBase,
   apiSubmitCourse,
@@ -144,6 +146,7 @@ export function CourseEditorPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generatingRubric, setGeneratingRubric] = useState(false);
   const [activeTab, setActiveTab] = useState("basics");
   const tabIndex = EDITOR_TABS.indexOf(activeTab);
   const isLastTab = tabIndex === EDITOR_TABS.length - 1;
@@ -426,6 +429,70 @@ export function CourseEditorPage() {
       );
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const runGenerateRubric = async () => {
+    if (!isNew && !courseId) return;
+    setGeneratingRubric(true);
+    try {
+      let result: { rubric: RubricCriterion[]; message?: string };
+      if (isNew) {
+        const docsTexts: string[] = [];
+        for (const t of pendingTextDocs) {
+          docsTexts.push(`Title: ${t.title}\n${t.content}`);
+        }
+        for (const item of pendingFiles) {
+          if (!isTextDoc(item.file)) continue;
+          try {
+            const text = await item.file.text();
+            if (text.trim()) docsTexts.push(text);
+          } catch {
+            // unreadable file — skip its text for the draft
+          }
+        }
+        if (
+          knowledgeText.trim().length === 0 &&
+          docsTexts.length === 0 &&
+          title.trim().length === 0
+        ) {
+          toast.info(
+            "Add some knowledge first — attach documents or notes to the knowledge base so a scoring rubric can be generated.",
+          );
+          return;
+        }
+        result = await apiGenerateRubricDraft({
+          title: title.trim(),
+          description: description.trim(),
+          knowledgeText: knowledgeText.trim(),
+          docsTexts,
+          faqs: cleanFaqs(),
+        });
+      } else if (courseId) {
+        result = await apiGenerateRubric(courseId);
+      } else {
+        return;
+      }
+      if (result.rubric.length > 0) {
+        setCriteria(
+          result.rubric.map((entry) => ({
+            ...entry,
+            id: nextRubricId(),
+          })),
+        );
+        toast.success("AI scoring rubric generated — review and customize weights.");
+      } else {
+        toast.info(
+          result.message ??
+            "Add documents to the Knowledge Base first so a scoring rubric can be generated.",
+        );
+      }
+    } catch (err) {
+      toast.error(
+        (err as { message?: string })?.message ?? "Couldn't generate scoring rubric.",
+      );
+    } finally {
+      setGeneratingRubric(false);
     }
   };
 
@@ -1999,13 +2066,33 @@ export function CourseEditorPage() {
               )}
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={addCriterion}>
+                <Button type="button" variant="outline" size="sm" onClick={addCriterion}>
                   Add criterion
                 </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  loading={generatingRubric}
+                  disabled={!canGenerate && title.trim().length === 0}
+                  onClick={() => void runGenerateRubric()}
+                  title={
+                    canGenerate || title.trim().length > 0
+                      ? "Draft scoring rubric from the Knowledge Base & course context"
+                      : "Add course details or Knowledge Base documents first"
+                  }
+                >
+                  {generatingRubric ? "Generating…" : "Auto-generate with AI"}
+                </Button>
                 {criteria.length > 0 && (
-                  <Button variant="ghost" size="sm" onClick={distributeEvenly}>
+                  <Button type="button" variant="ghost" size="sm" onClick={distributeEvenly}>
                     Distribute evenly
                   </Button>
+                )}
+                {!canGenerate && title.trim().length === 0 && (
+                  <span className="text-xs text-neutral-500">
+                    Add course details or Knowledge Base documents to enable generation.
+                  </span>
                 )}
               </div>
 

@@ -418,6 +418,32 @@ export async function apiGenerateFaqsDraft(draft: {
   return data as { faqs: string[]; message?: string };
 }
 
+export async function apiGenerateRubric(
+  courseId: string,
+): Promise<{ rubric: RubricCriterion[]; message?: string }> {
+  const res = await jsonRequest(
+    `/api/drills/${encodeURIComponent(courseId)}/generate-rubric`,
+    "POST",
+    {},
+  );
+  const data = await parseJson(res);
+  if (!res.ok) throw data as AuthErrorPayload;
+  return data as { rubric: RubricCriterion[]; message?: string };
+}
+
+export async function apiGenerateRubricDraft(draft: {
+  title: string;
+  description: string;
+  knowledgeText: string;
+  docsTexts: string[];
+  faqs?: string[];
+}): Promise<{ rubric: RubricCriterion[]; message?: string }> {
+  const res = await jsonRequest("/api/ai/generate-rubric", "POST", draft);
+  const data = await parseJson(res);
+  if (!res.ok) throw data as AuthErrorPayload;
+  return data as { rubric: RubricCriterion[]; message?: string };
+}
+
 // ---------------------------------------------------------------------------
 // Telenow Knowledge Base API
 // ---------------------------------------------------------------------------
