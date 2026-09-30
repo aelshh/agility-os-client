@@ -26,10 +26,21 @@ export type CheckinStatus =
   | "failed"
   | "skipped";
 
+export type CheckinQuestionAnswer = {
+  question: string;
+  answer: string;
+};
+
 export type CheckinSummary = {
-  report: string;
-  suggestions: string;
-  updates: string;
+  report?: string;
+  priorities?: string;
+  blockers?: string;
+  suggestions?: string;
+  updates?: string;
+  sentiment?: "positive" | "neutral" | "needs_attention" | "blocked" | string;
+  keyTakeaway?: string;
+  answers?: CheckinQuestionAnswer[];
+  raw?: string;
 };
 
 export type CheckinSchedule = {
