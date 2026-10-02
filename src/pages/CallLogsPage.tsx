@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { PhoneCall, Brain, ChatCenteredText, Eye } from "@phosphor-icons/react";
 import type { CourseEnrollment } from "../api/courses";
 import { CourseCallDetailModal } from "../features/courses/CourseCallDetailModal";
+import { IconBadge } from "../components/ui/IconBadge";
+import { Button } from "../components";
+import { cn } from "../lib/cn";
 
 type CallLog = CourseEnrollment & {
   type: "course" | "checkin";
@@ -34,7 +38,7 @@ function formatDuration(seconds?: number | null): string {
 export function CallLogsPage() {
   const [calls, setCalls] = useState<CallLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCall, setSelectedCall] = useState<CourseEnrollment | null>(null);
+  const [selectedCall, setSelectedCall] = useState<CallLog | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,98 +65,134 @@ export function CallLogsPage() {
   return (
     <div className="space-y-6 bg-neutral-50 min-h-screen px-4 py-6 sm:px-6 lg:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">Call Logs</h1>
-          <p className="text-sm text-neutral-500">
-            View all calls placed by the Telenow AI agent for courses and check-ins. Click any call to inspect recording and AI scorecard.
-          </p>
+        <div className="flex items-start gap-3.5">
+          <IconBadge
+            icon={PhoneCall}
+            variant="indigo"
+            size="lg"
+            weight="duotone"
+          />
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 font-serif">Call Logs</h1>
+            <p className="text-sm text-neutral-500">
+              View all calls placed by the Telenow AI agent for courses and check-ins. Click any call to inspect recording and AI scorecard.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                <th className="p-4 font-medium">User</th>
-                <th className="p-4 font-medium">Context</th>
-                <th className="p-4 font-medium">Type</th>
-                <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Score</th>
-                <th className="p-4 font-medium">Duration</th>
-                <th className="p-4 font-medium">Date</th>
-                <th className="p-4 font-medium text-right">Details</th>
+              <tr className="border-b border-neutral-200 bg-neutral-50/80 text-neutral-500 text-xs uppercase tracking-wider font-semibold">
+                <th className="p-4 font-semibold">User</th>
+                <th className="p-4 font-semibold">Context</th>
+                <th className="p-4 font-semibold">Type</th>
+                <th className="p-4 font-semibold">Status</th>
+                <th className="p-4 font-semibold">Score</th>
+                <th className="p-4 font-semibold">Duration</th>
+                <th className="p-4 font-semibold">Date</th>
+                <th className="p-4 font-semibold text-right">Details</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-200">
+            <tbody className="divide-y divide-neutral-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-neutral-500">
+                  <td colSpan={8} className="p-12 text-center text-neutral-500">
                     Loading calls...
                   </td>
                 </tr>
               ) : calls?.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-neutral-500">
-                    No calls recorded yet.
+                  <td colSpan={8} className="p-12 text-center text-neutral-500">
+                    <IconBadge
+                      icon={PhoneCall}
+                      variant="indigo"
+                      size="xl"
+                      weight="duotone"
+                      className="mx-auto mb-3"
+                    />
+                    <p className="font-semibold text-neutral-800">No calls recorded yet</p>
+                    <p className="text-xs text-neutral-400 mt-1">Practice and check-in calls will appear here once initiated.</p>
                   </td>
                 </tr>
               ) : (
-                calls?.map((call) => (
+                calls.map((call) => (
                   <tr
                     key={call.id}
+                    className="hover:bg-neutral-50/80 transition-colors cursor-pointer"
                     onClick={() => setSelectedCall(call)}
-                    className="hover:bg-neutral-50 cursor-pointer transition-colors"
                   >
                     <td className="p-4">
-                      <div className="font-medium text-neutral-900">
-                        {call.userName || "Unknown"}
-                      </div>
-                      <div className="text-xs text-neutral-500">{call.userEmail || call.userPhone}</div>
-                    </td>
-                    <td className="p-4 text-neutral-700 font-medium">
-                      {call.title || "Unknown"}
+                      <div className="font-semibold text-neutral-900">{call.userName || "Unknown"}</div>
+                      <div className="text-xs text-neutral-500">{call.userEmail || "—"}</div>
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center rounded-full bg-neutral-100 px-2 py-1 text-xs font-medium text-neutral-700 capitalize">
-                        {call.type}
-                      </span>
+                      <div className="font-medium text-neutral-900 max-w-[200px] truncate">
+                        {call.title || "Untitled"}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      {call.type === "course" ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200/60">
+                          <Brain className="h-3.5 w-3.5" weight="duotone" />
+                          Course
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-xs font-semibold text-purple-700 border border-purple-200/60">
+                          <ChatCenteredText className="h-3.5 w-3.5" weight="duotone" />
+                          Check-in
+                        </span>
+                      )}
                     </td>
                     <td className="p-4">
                       <span
-                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium capitalize ${
+                        className={cn(
+                          "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wider",
                           call.status === "completed"
-                            ? "bg-green-100 text-green-700"
-                            : call.status === "answered"
-                              ? "bg-blue-100 text-blue-700"
-                              : call.status === "no_answer"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-neutral-100 text-neutral-700"
-                        }`}
+                            ? "bg-emerald-100 text-emerald-800"
+                            : call.status === "failed"
+                              ? "bg-red-100 text-red-800"
+                              : call.status === "calling" || call.status === "queued"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-neutral-100 text-neutral-700",
+                        )}
                       >
                         {call.status.replace("_", " ")}
                       </span>
                     </td>
-                    <td className="p-4 font-mono font-semibold text-neutral-800">
-                      {call.score !== null ? `${call.score}%` : "—"}
+                    <td className="p-4">
+                      {call.score !== null && call.score !== undefined ? (
+                        <span className={cn(
+                          "font-mono font-bold",
+                          call.score >= 80 ? "text-emerald-600" : call.score >= 60 ? "text-amber-600" : "text-red-600"
+                        )}>
+                          {call.score}%
+                        </span>
+                      ) : (
+                        <span className="text-neutral-400">—</span>
+                      )}
                     </td>
-                    <td className="p-4 font-mono text-xs text-neutral-600">
+                    <td className="p-4 text-neutral-600 font-mono text-xs">
                       {formatDuration(call.durationSecs)}
                     </td>
-                    <td className="p-4 text-neutral-500 whitespace-nowrap text-xs">
-                      {formatDate(call.calledAt)}
+                    <td className="p-4 text-neutral-500 text-xs">
+                      {formatDate(call.calledAt || call.completedAt)}
                     </td>
                     <td className="p-4 text-right">
-                      <button
-                        type="button"
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedCall(call);
                         }}
-                        className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 shadow-2xs hover:bg-neutral-100 transition-all"
+                        className="h-8 px-2.5 text-xs font-semibold"
                       >
-                        Inspect &rarr;
-                      </button>
+                        <Eye className="h-3.5 w-3.5 mr-1" weight="duotone" />
+                        Details
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -162,12 +202,12 @@ export function CallLogsPage() {
         </div>
       </div>
 
-      {/* Detail Modal */}
-      <CourseCallDetailModal
-        enrollment={selectedCall}
-        onClose={() => setSelectedCall(null)}
-      />
+      {selectedCall && (
+        <CourseCallDetailModal
+          enrollment={selectedCall}
+          onClose={() => setSelectedCall(null)}
+        />
+      )}
     </div>
   );
 }
-

@@ -2,14 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { CheckCircle, ChatCenteredText, Trophy, ArrowRight } from "@phosphor-icons/react";
 
 import { apiListCourses } from "../api/courses";
 import type { Course } from "../api/courses";
 import { Spinner } from "../components";
+import { IconBadge } from "../components/ui/IconBadge";
 import { StatusBadge } from "../features/courses/StatusBadge";
 import { pageVariants, stagger, fadeUp, EASE } from "../lib/animation";
 
-const metaClasses = "text-xs font-medium uppercase tracking-wide text-neutral-400";
 
 export function CourseApprovalsPage() {
   const router = useRouter();
@@ -40,15 +41,23 @@ export function CourseApprovalsPage() {
         variants={stagger}
         initial="initial"
         animate="animate"
-        className="flex w-full max-w-5xl flex-col gap-4"
+        className="flex w-full max-w-5xl flex-col gap-6"
       >
-        <motion.div variants={fadeUp}>
-          <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
-            Review queue
-          </h1>
-          <p className="mt-1 text-sm font-medium text-neutral-600">
-            Courses submitted by your content team, waiting for your sign-off.
-          </p>
+        <motion.div variants={fadeUp} className="flex items-start gap-4">
+          <IconBadge
+            icon={CheckCircle}
+            variant="amber"
+            size="lg"
+            weight="duotone"
+          />
+          <div>
+            <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
+              Review queue
+            </h1>
+            <p className="mt-1 text-sm font-medium text-neutral-600">
+              Courses submitted by your content team, waiting for your sign-off.
+            </p>
+          </div>
         </motion.div>
 
         {courses === null ? (
@@ -60,7 +69,14 @@ export function CourseApprovalsPage() {
             variants={fadeUp}
             className="w-full rounded-2xl border border-neutral-200 bg-white p-10 text-center shadow-sm"
           >
-            <p className="text-sm font-semibold text-neutral-900">
+            <IconBadge
+              icon={CheckCircle}
+              variant="emerald"
+              size="xl"
+              weight="duotone"
+              className="mx-auto mb-3"
+            />
+            <p className="text-base font-semibold text-neutral-900">
               Queue is clear
             </p>
             <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
@@ -87,40 +103,39 @@ export function CourseApprovalsPage() {
                     params: { courseId: course.id },
                   })
                 }
-                className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 text-left shadow-sm transition-colors hover:border-neutral-300"
+                className="group flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-5 text-left shadow-sm transition-all hover:border-neutral-300 hover:shadow-md"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-serif text-lg font-medium leading-snug text-neutral-950">
-                    {course.title}
-                  </h2>
-                  <StatusBadge status={course.status} />
-                </div>
-                {course.description && (
-                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-600">
-                    {course.description}
-                  </p>
-                )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
-                    {(course.faqs?.length ?? 0) > 0
-                      ? `${course.faqs.length} ${course.faqs.length === 1 ? "question" : "questions"}`
-                      : (course.docs?.length ?? 0) > 0
-                        ? `${course.docs.length} ${course.docs.length === 1 ? "document" : "documents"}`
-                        : "No material yet"}
-                  </span>
-                  {(course.audienceIds?.length ?? 0) > 0 && (
-                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
-                      {course.audienceIds.length} practitioner
-                      {course.audienceIds.length === 1 ? "" : "s"} selected
-                    </span>
+                <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <h2 className="font-serif text-lg font-medium leading-snug text-neutral-950 group-hover:text-amber-900 transition-colors">
+                      {course.title}
+                    </h2>
+                    <StatusBadge status={course.status} />
+                  </div>
+                  {course.description && (
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-neutral-600">
+                      {course.description}
+                    </p>
                   )}
                 </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <p className={metaClasses}>
-                    by {course.createdByName ?? "Unknown"}
-                  </p>
-                  <span className="text-xs font-semibold text-neutral-900">
-                    Review &rarr;
+
+                <div className="mt-6 flex items-center justify-between border-t border-neutral-100 pt-4 text-xs text-neutral-500">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {course.faqs && course.faqs.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-neutral-600">
+                        <ChatCenteredText className="h-3.5 w-3.5 text-neutral-400" weight="duotone" />
+                        {course.faqs.length} question{course.faqs.length === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {course.scoringRubric && course.scoringRubric.length > 0 && (
+                      <span className="inline-flex items-center gap-1 text-neutral-600">
+                        <Trophy className="h-3.5 w-3.5 text-neutral-400" weight="duotone" />
+                        {course.scoringRubric.length} rubric criteria
+                      </span>
+                    )}
+                  </div>
+                  <span className="inline-flex items-center gap-1 font-semibold text-neutral-900 group-hover:translate-x-0.5 transition-transform">
+                    Review <ArrowRight className="h-3.5 w-3.5" weight="bold" />
                   </span>
                 </div>
               </motion.button>

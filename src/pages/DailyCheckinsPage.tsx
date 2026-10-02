@@ -1,3 +1,5 @@
+import { CaretDown, CaretUp, PhoneCall, Plus } from "@phosphor-icons/react";
+import { IconBadge } from "../components/ui/IconBadge";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "@tanstack/react-router";
@@ -598,19 +600,7 @@ function ScheduleForm({
                       title="Move up"
                       className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
                     >
-                      <svg
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M10 15V5M5 10l5-5 5 5"
-                        />
-                      </svg>
+                      <CaretUp className="h-4 w-4" />
                     </button>
                   )}
                   {index < questions.length - 1 && (
@@ -626,19 +616,7 @@ function ScheduleForm({
                       title="Move down"
                       className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
                     >
-                      <svg
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M10 5v10M5 10l5 5 5-5"
-                        />
-                      </svg>
+                      <CaretDown className="h-4 w-4" />
                     </button>
                   )}
                   {questions.length > 1 && (
@@ -697,21 +675,7 @@ function ScheduleForm({
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 sm:p-5">
               <div className="flex min-w-0 items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    className="h-5 w-5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
-                    />
-                  </svg>
-                </div>
+                <IconBadge icon={PhoneCall} variant={phoneNumber ? "emerald" : "neutral"} size="lg" weight="duotone" />
                 <div className="min-w-0">
                   {phoneNumber ? (
                     <div>
@@ -1778,9 +1742,17 @@ export function DailyCheckinsPage() {
           className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
         >
           <div className="min-w-0">
-            <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
-              Daily check-ins
-            </h1>
+            <div className="flex items-center gap-3.5">
+              <IconBadge icon={PhoneCall} variant="purple" size="lg" weight="duotone" />
+              <div>
+                <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
+                  Daily check-ins
+                </h1>
+                <p className="mt-1 text-sm font-medium text-neutral-600">
+                  Automated daily voice calls to gather progress, priorities, and blockers from your team.
+                </p>
+              </div>
+            </div>
             <p className="mt-1 text-sm font-medium text-neutral-600">
               Automated AI voice calls connect with your team daily to gather
               spoken status, priorities, blockers, and feedback.
@@ -1806,17 +1778,7 @@ export function DailyCheckinsPage() {
                 setEditingId(null);
               }}
               icon={
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <path d="M10 4v12M4 10h12" />
-                </svg>
+                <Plus className="h-4 w-4" weight="bold" />
               }
             >
               New check-in
@@ -1940,21 +1902,7 @@ export function DailyCheckinsPage() {
               variants={fadeUp}
               className="w-full rounded-2xl border border-neutral-200 bg-white p-8 text-center shadow-sm sm:p-10"
             >
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-600 mb-3">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  className="h-6 w-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
+              <IconBadge icon={PhoneCall} variant="purple" size="xl" weight="duotone" className="mx-auto mb-3" />
               <p className="text-base font-semibold text-neutral-900">
                 No daily check-ins yet
               </p>

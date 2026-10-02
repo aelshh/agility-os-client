@@ -4,6 +4,8 @@ import type { FormEvent } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../features/auth";
 import { Button, Modal } from "../components";
+import { PlugsConnected } from "@phosphor-icons/react";
+import { IconBadge } from "../components/ui/IconBadge";
 import { pageVariants, fadeUp } from "../lib/animation";
 import {
   apiGetTelenowStatus,
@@ -12,7 +14,6 @@ import {
   type TelenowIntegrationStatus,
 } from "../api/telenow";
 import { PhoneNumbersTable } from "../features/telephony/PhoneNumbersTable";
-
 const labelClasses = "text-sm font-medium text-neutral-600";
 const inputClasses =
   "w-full rounded-xl border border-neutral-300 bg-neutral-50/70 px-4 py-2.5 text-sm text-neutral-950 placeholder:text-neutral-500 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
@@ -167,9 +168,17 @@ export function IntegrationsPage() {
         className="flex w-full max-w-4xl flex-col items-start gap-4 sm:flex-row sm:justify-between"
       >
         <div>
-          <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
-            Integrations
-          </h1>
+          <div className="flex items-center gap-3.5">
+            <IconBadge icon={PlugsConnected} variant="teal" size="lg" weight="duotone" />
+            <div>
+              <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
+                Integrations
+              </h1>
+              <p className="mt-1 text-sm font-medium text-neutral-600">
+                Connected telephony, AI engine, and HRMS directory services.
+              </p>
+            </div>
+          </div>
           <p className="mt-1 text-sm font-medium text-neutral-600">
             Manage your organization's external telephony and service connections.
           </p>

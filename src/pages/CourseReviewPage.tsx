@@ -1,3 +1,14 @@
+import {
+  ArrowLeft,
+  BookOpen,
+  Brain,
+  ChatCenteredText,
+  CheckCircle,
+  SpeakerHigh,
+  Trophy,
+  WhatsappLogo,
+  XCircle,
+} from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useParams, useRouter } from "@tanstack/react-router";
@@ -54,6 +65,8 @@ function formatDuration(seconds?: number | null): string {
   if (mins === 0) return `${secs}s`;
   return `${mins}m ${secs}s`;
 }
+
+
 
 type PerformanceFilter = "all" | "mastered" | "proficient" | "needs_practice" | "incomplete";
 
@@ -338,9 +351,7 @@ export function CourseReviewPage() {
         className="flex w-full max-w-5xl items-start justify-between gap-4"
       >
         <div className="min-w-0">
-          <Button variant="ghost" size="sm" onClick={goBack} className="mb-3">
-            &larr; Back to courses
-          </Button>
+          <Button variant="ghost" size="sm" onClick={goBack} className="mb-3"><ArrowLeft className="h-4 w-4 mr-1.5 shrink-0" weight="bold" />Back to courses</Button>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-serif text-3xl font-medium leading-snug tracking-normal text-neutral-950">
               {course.title}
@@ -374,19 +385,21 @@ export function CourseReviewPage() {
       >
         <Tabs
           items={[
-            { id: "overview", label: isPublished ? "Analytics & Delivery" : "Overview" },
+            { id: "overview", label: isPublished ? "Analytics & Delivery" : "Overview", icon: Brain },
             {
               id: "knowledge",
               label: "Knowledge base",
+              icon: BookOpen,
               count: kbDocuments.length || (course.docs?.length ?? 0),
             },
-            { id: "voice", label: "Coach voice & line" },
+            { id: "voice", label: "Coach voice & line", icon: SpeakerHigh },
             {
               id: "questions",
               label: "Practice questions",
+              icon: ChatCenteredText,
               count: (course.faqs?.length ?? 0),
             },
-            { id: "rubric", label: "Scoring rubric" },
+            { id: "rubric", label: "Scoring rubric", icon: Trophy },
           ]}
           active={reviewTab}
           onChange={setReviewTab}
@@ -1032,6 +1045,76 @@ export function CourseReviewPage() {
                 </div>
               </div>
             )}
+
+            {/* WhatsApp Deliverable Resources in Review Page */}
+            {Array.isArray(course.whatsappResources) && course.whatsappResources.length > 0 && (
+              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                    <WhatsappLogo className="h-4 w-4" weight="fill" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-neutral-950">
+                      WhatsApp Deliverable Resources ({course.whatsappResources.length})
+                    </h4>
+                    <p className="text-xs text-neutral-500">
+                      Configured for direct learner dispatch via WhatsApp during or following practice.
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="flex flex-col gap-2 pt-1">
+                  {course.whatsappResources.map((res) => (
+                    <li
+                      key={res.id}
+                      className="flex flex-col gap-2 rounded-lg border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold text-sm text-neutral-900 truncate">
+                            {res.title}
+                          </span>
+                          <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 uppercase">
+                            {res.type}
+                          </span>
+                          <span className="rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                            Trigger: {res.deliveryTrigger.replace("_", " ")}
+                          </span>
+                        </div>
+                        {res.description && (
+                          <p className="mt-0.5 text-xs text-neutral-500 truncate max-w-lg">
+                            {res.description}
+                          </p>
+                        )}
+                        {res.url && (
+                          <a
+                            href={res.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 block max-w-sm truncate text-xs text-indigo-600 hover:underline"
+                          >
+                            {res.url}
+                          </a>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                            res.enabled
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-neutral-200 text-neutral-600",
+                          )}
+                        >
+                          {res.enabled ? "Active" : "Paused"}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
         )}
 
@@ -1134,16 +1217,8 @@ export function CourseReviewPage() {
               </div>
             ) : (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setRejectOpen(true)}
-                  disabled={busy !== null}
-                >
-                  Reject
-                </Button>
-                <Button loading={busy === "approve"} onClick={() => void handleApprove()}>
-                  Approve & publish
-                </Button>
+                <Button variant="outline" onClick={() => setRejectOpen(true)} disabled={busy !== null} className="text-red-700 border-red-200 hover:bg-red-50"><XCircle className="h-4 w-4 mr-1.5 shrink-0" weight="duotone" />Reject</Button>
+                <Button loading={busy === "approve"} onClick={() => void handleApprove()} className="bg-emerald-700 hover:bg-emerald-800"><CheckCircle className="h-4 w-4 mr-1.5 shrink-0" weight="duotone" />Approve & publish</Button>
               </div>
             )}
           </>
@@ -1153,6 +1228,7 @@ export function CourseReviewPage() {
       {/* ── Practitioner Scorecard & Call Inspection Modal ── */}
       <CourseCallDetailModal
         enrollment={selectedEnrollment}
+        course={course}
         onClose={() => setSelectedEnrollment(null)}
       />
     </motion.div>
