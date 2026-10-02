@@ -233,6 +233,26 @@ const callsRoute = createRoute({
   ),
 });
 
+const scheduleRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/schedule",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseCalendarPage"),
+    "CourseCalendarPage",
+  ),
+});
+
+const calendarRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/calendar",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseCalendarPage"),
+    "CourseCalendarPage",
+  ),
+});
+
 // ---------------------------------------------------------------------------
 // /connect-hrms — Mandatory post-signup HRMS connection
 // ---------------------------------------------------------------------------
@@ -319,6 +339,8 @@ const routeTree = rootRoute.addChildren([
     reviewCourseRoute,
     checkinsRoute,
     callsRoute,
+    scheduleRoute,
+    calendarRoute,
   ]),
   connectHrmsRoute,
   loginRoute,
