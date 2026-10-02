@@ -1,3 +1,4 @@
+import { Play, Pause, ArrowCounterClockwise, ArrowClockwise, WarningCircle } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/cn";
 
@@ -142,9 +143,7 @@ export function AudioPlayer({ src, title, className, autoPlay = false }: AudioPl
     return (
       <div className={cn("rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs text-neutral-500", className)}>
         <div className="flex items-center gap-2">
-          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-amber-500 shrink-0">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-          </svg>
+          <WarningCircle className="h-4 w-4 text-amber-500 shrink-0" weight="duotone" />
           <span>Recording unavailable or expired for this call session.</span>
         </div>
       </div>
@@ -211,13 +210,9 @@ export function AudioPlayer({ src, title, className, autoPlay = false }: AudioPl
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
               </svg>
             ) : isPlaying ? (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
-                <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75.75v12a.75.75 0 01-1.5 0v-12a.75.75 0 01.75-.75zm10.5 0a.75.75 0 01.75.75v12a.75.75 0 01-1.5 0v-12a.75.75 0 01.75-.75z" clipRule="evenodd" />
-              </svg>
+              <Pause className="h-4 w-4" weight="fill" />
             ) : (
-              <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 h-4 w-4">
-                <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
-              </svg>
+              <Play className="ml-0.5 h-4 w-4" weight="fill" />
             )}
           </button>
 
@@ -230,9 +225,7 @@ export function AudioPlayer({ src, title, className, autoPlay = false }: AudioPl
             title="Rewind 5 seconds"
             aria-label="Rewind 5 seconds"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-            </svg>
+            <ArrowCounterClockwise className="h-4 w-4" weight="bold" />
           </button>
 
           {/* +5s Skip Button */}
@@ -244,9 +237,7 @@ export function AudioPlayer({ src, title, className, autoPlay = false }: AudioPl
             title="Forward 5 seconds"
             aria-label="Forward 5 seconds"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" />
-            </svg>
+            <ArrowClockwise className="h-4 w-4" weight="bold" />
           </button>
         </div>
 

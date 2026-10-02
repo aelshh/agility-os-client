@@ -1,3 +1,4 @@
+import { X } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
@@ -63,17 +64,7 @@ export function DetailPanel({
               className="shrink-0 rounded-md p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
               aria-label="Close panel"
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M15 5 5 15M5 5l10 10" />
-              </svg>
+              <X className="h-4 w-4" weight="bold" />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>

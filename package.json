@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-router": "^1.170.34",
     "@tanstack/router-devtools": "^1.167.1",
@@ -17,6 +18,7 @@
     "d3-hierarchy": "^3.1.2",
     "framer-motion": "^13.2.0",
     "jszip": "^3.10.2",
+    "lucide-react": "^1.49.0",
     "papaparse": "^5.7.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

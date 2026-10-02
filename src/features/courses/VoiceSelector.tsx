@@ -1,3 +1,4 @@
+import { MagnifyingGlass, Play, Pause, Check, X } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { VoiceOption } from "../../api/courses";
 import { apiGetVoices } from "../../api/courses";
@@ -183,10 +184,7 @@ export function VoiceSelector({
             >
               {playingVoiceId === selectedVoice.id ? (
                 <>
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                    <rect x="5" y="4" width="3" height="12" rx="1" />
-                    <rect x="12" y="4" width="3" height="12" rx="1" />
-                  </svg>
+                  <Pause className="h-4 w-4" weight="fill" />
                   <span>Playing Sample</span>
                   <span className="flex items-center gap-0.5 ml-1">
                     <span className="h-2 w-0.5 animate-pulse rounded-full bg-white" />
@@ -196,9 +194,7 @@ export function VoiceSelector({
                 </>
               ) : (
                 <>
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                    <path d="M6.3 3.8A1 1 0 005 4.7v10.6a1 1 0 001.3.9l10-5.3a1 1 0 000-1.8l-10-5.3z" />
-                  </svg>
+                  <Play className="h-4 w-4" weight="fill" />
                   <span>Play Sample</span>
                 </>
               )}
@@ -259,20 +255,11 @@ export function VoiceSelector({
               placeholder="Search by name, tone, or style…"
               className="w-full rounded-xl border border-neutral-300 bg-neutral-50/70 px-3.5 py-2 pl-9 text-xs text-neutral-900 placeholder:text-neutral-400 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10"
             />
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
+            <MagnifyingGlass
               className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-neutral-400"
+              weight="bold"
               aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.8}
-                d="M17.5 17.5l-3.5-3.5m1-4a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z"
-              />
-            </svg>
+            />
             {search && (
               <button
                 type="button"
@@ -280,13 +267,7 @@ export function VoiceSelector({
                 className="absolute right-2.5 top-2.5 text-neutral-400 hover:text-neutral-600"
                 aria-label="Clear search"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <X className="h-4 w-4" weight="bold" />
               </button>
             )}
           </div>
@@ -474,10 +455,7 @@ export function VoiceSelector({
                           >
                             {isPlaying ? (
                               <>
-                                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                                  <rect x="5" y="4" width="3" height="12" rx="1" />
-                                  <rect x="12" y="4" width="3" height="12" rx="1" />
-                                </svg>
+                                <Pause className="h-3.5 w-3.5" weight="fill" />
                                 <span className="hidden sm:inline text-[11px]">Playing</span>
                                 <span className="flex items-center gap-0.5 ml-0.5">
                                   <span className="h-2 w-0.5 animate-pulse rounded-full bg-white" />
@@ -487,9 +465,7 @@ export function VoiceSelector({
                               </>
                             ) : (
                               <>
-                                <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                                  <path d="M6.3 3.8A1 1 0 005 4.7v10.6a1 1 0 001.3.9l10-5.3a1 1 0 000-1.8l-10-5.3z" />
-                                </svg>
+                                <Play className="h-3.5 w-3.5" weight="fill" />
                                 <span className="hidden sm:inline text-[11px]">Play</span>
                               </>
                             )}
@@ -520,9 +496,7 @@ export function VoiceSelector({
                         >
                           {isSelected ? (
                             <span className="flex items-center gap-1">
-                              <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
-                                <path d="M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z" />
-                              </svg>
+                              <Check className="h-3.5 w-3.5" weight="bold" />
                               <span>Selected</span>
                             </span>
                           ) : (

@@ -1,3 +1,9 @@
+import {
+  CaretDown,
+  CornersIn,
+  CornersOut,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -680,19 +686,11 @@ function OrgTreeCanvas() {
       {/* Search */}
       <div className="absolute left-1/2 top-3 z-20 w-[min(340px,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-neutral-200 bg-white/95 p-2 shadow-lg shadow-neutral-900/5 backdrop-blur">
         <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
-          <svg
+          <MagnifyingGlass
             className="h-4 w-4 shrink-0 text-neutral-400"
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            weight="bold"
             aria-hidden="true"
-          >
-            <circle cx="9" cy="9" r="6" />
-            <path d="m15 15 3.5 3.5" />
-          </svg>
+          />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -724,37 +722,9 @@ function OrgTreeCanvas() {
             className="shrink-0 rounded-md p-1.5 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
           >
             {isFs ? (
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
-                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
-                <path d="M8 21v-3a2 2 0 0 0-2-2H3" />
-                <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
-              </svg>
+              <CornersIn className="h-4 w-4" weight="bold" aria-hidden="true" />
             ) : (
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-                <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-                <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-                <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-              </svg>
+              <CornersOut className="h-4 w-4" weight="bold" aria-hidden="true" />
             )}
           </button>
         </form>
@@ -784,21 +754,14 @@ function OrgTreeCanvas() {
             aria-label={legendOpen ? "Collapse org tree panel" : "Expand org tree panel"}
             className="shrink-0 rounded-md p-1 text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
           >
-            <svg
+            <CaretDown
               className={cn(
                 "h-4 w-4 transition-transform duration-200",
                 legendOpen && "rotate-180",
               )}
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              weight="bold"
               aria-hidden="true"
-            >
-              <path d="m5 8 5 5 5-5" />
-            </svg>
+            />
           </button>
         </div>
 

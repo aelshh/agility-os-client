@@ -1,12 +1,25 @@
+import {
+  Check,
+  FilePdf,
+  FileText,
+  LinkSimple,
+  Sparkle,
+  VideoCamera,
+  WhatsappLogo,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { CourseEnrollment } from "../../api/courses";
+import { toast } from "sonner";
+import type { Course, CourseEnrollment } from "../../api/courses";
+import { apiSendCourseWhatsappResource } from "../../api/courses";
 import { AudioPlayer } from "../../components/AudioPlayer";
 import { cn } from "../../lib/cn";
 import { EASE } from "../../lib/animation";
 
 interface CourseCallDetailModalProps {
   enrollment: CourseEnrollment | null;
+  course?: Course | null;
   onClose: () => void;
 }
 
@@ -34,8 +47,10 @@ function formatDate(iso?: string | null): string {
   }
 }
 
-export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<"scorecard" | "transcript" | "coaching">("scorecard");
+export function CourseCallDetailModal({ enrollment, course, onClose }: CourseCallDetailModalProps) {
+  const [activeTab, setActiveTab] = useState<"scorecard" | "transcript" | "coaching" | "resources">("scorecard");
+  const [sendingWhatsappId, setSendingWhatsappId] = useState<string | null>(null);
+  const [sentWhatsappMap, setSentWhatsappMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!enrollment) return;
@@ -157,9 +172,7 @@ export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailM
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-200 hover:text-neutral-700 active:scale-95"
                 aria-label="Close dialog"
               >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
-                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                </svg>
+                <X className="h-5 w-5" weight="bold" />
               </button>
             </div>
 
@@ -218,6 +231,29 @@ export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailM
                     )}
                   >
                     {transcript.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("resources")}
+                className={cn(
+                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-all flex items-center gap-1.5",
+                  activeTab === "resources"
+                    ? "bg-neutral-900 text-white shadow-sm"
+                    : "text-neutral-600 hover:bg-neutral-200/60 hover:text-neutral-900",
+                )}
+              >
+                <WhatsappLogo className="h-3.5 w-3.5 text-emerald-500" weight="duotone" />
+                <span>WhatsApp Deliverables</span>
+                {course?.whatsappResources && course.whatsappResources.length > 0 && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.2 text-[10px]",
+                      activeTab === "resources" ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-700",
+                    )}
+                  >
+                    {course.whatsappResources.length}
                   </span>
                 )}
               </button>
@@ -317,9 +353,7 @@ export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailM
                 {enrollment.summary && (
                   <div className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-4">
                     <div className="flex items-center gap-2">
-                      <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4 text-indigo-600">
-                        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM8.5 6.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm-.75 4.75a.75.75 0 011.5 0v3a.75.75 0 01-1.5 0v-3z" />
-                      </svg>
+                      <Sparkle className="h-4 w-4 text-indigo-600" weight="fill" />
                       <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-700">
                         Session Summary & Key Highlights
                       </h4>
@@ -363,15 +397,11 @@ export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailM
                             <div className="flex items-center gap-2">
                               {item.met ? (
                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
+                                  <Check className="h-3.5 w-3.5" weight="bold" />
                                 </span>
                               ) : (
                                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-700">
-                                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                  </svg>
+                                  <X className="h-3.5 w-3.5" weight="bold" />
                                 </span>
                               )}
                               <span className="text-sm font-semibold text-neutral-900">
@@ -595,6 +625,154 @@ export function CourseCallDetailModal({ enrollment, onClose }: CourseCallDetailM
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ── TAB 4: WHATSAPP LEARNING DELIVERABLES ── */}
+            {activeTab === "resources" && (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                      <WhatsappLogo className="h-5 w-5" weight="fill" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold text-neutral-900">
+                        WhatsApp Learning Resources
+                      </h4>
+                      <p className="mt-0.5 text-xs text-neutral-600 leading-relaxed">
+                        Directly dispatch course videos, cheat sheets, PDFs, and links to{" "}
+                        <strong className="font-semibold text-neutral-900">
+                          {enrollment.userName || "Practitioner"}
+                        </strong>
+                        {enrollment.userPhone ? ` (${enrollment.userPhone})` : ""} over WhatsApp.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {(!course?.whatsappResources || course.whatsappResources.length === 0) ? (
+                  <div className="rounded-2xl border border-dashed border-neutral-200 p-8 text-center text-xs text-neutral-500">
+                    No WhatsApp learning deliverables configured for this course yet. Add them in Course Editor &gt; Knowledge Base.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {course.whatsappResources.map((res) => {
+                      const isSent = sentWhatsappMap[res.id];
+                      const isSending = sendingWhatsappId === res.id;
+                      const hasPhone = Boolean(enrollment.userPhone);
+
+                      const handleSend = async () => {
+                        if (!course?.id || !hasPhone) {
+                          toast.error("Practitioner phone number is missing.");
+                          return;
+                        }
+                        setSendingWhatsappId(res.id);
+                        try {
+                          await apiSendCourseWhatsappResource(course.id, {
+                            resourceId: res.id,
+                            targetUserId: enrollment.userId,
+                            targetPhone: enrollment.userPhone || undefined,
+                          });
+                          setSentWhatsappMap((prev) => ({ ...prev, [res.id]: true }));
+                          toast.success(`Sent "${res.title}" via WhatsApp to ${enrollment.userName || enrollment.userPhone}!`);
+                        } catch (err) {
+                          toast.error(
+                            (err as { message?: string })?.message ?? "Failed to send WhatsApp resource.",
+                          );
+                        } finally {
+                          setSendingWhatsappId(null);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={res.id}
+                          className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-xs transition-shadow sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="flex min-w-0 items-start gap-3">
+                            <div
+                              className={cn(
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
+                                res.type === "video"
+                                  ? "bg-red-100 text-red-700"
+                                  : res.type === "pdf"
+                                    ? "bg-amber-100 text-amber-700"
+                                    : res.type === "link"
+                                      ? "bg-sky-100 text-sky-700"
+                                      : "bg-emerald-100 text-emerald-700",
+                              )}
+                            >
+                              {res.type === "video" && (
+                                <VideoCamera className="h-4 w-4" weight="duotone" />
+                              )}
+                              {res.type === "pdf" && <FilePdf className="h-4 w-4" weight="duotone" />}
+                              {res.type === "link" && (
+                                <LinkSimple className="h-4 w-4" weight="bold" />
+                              )}
+                              {res.type === "document" && (
+                                <FileText className="h-4 w-4" weight="duotone" />
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-semibold text-sm text-neutral-900 truncate">
+                                  {res.title}
+                                </span>
+                                <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 uppercase">
+                                  {res.type}
+                                </span>
+                                <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                  Trigger: {res.deliveryTrigger.replace("_", " ")}
+                                </span>
+                              </div>
+                              {res.description && (
+                                <p className="mt-0.5 text-xs text-neutral-500 truncate max-w-md">
+                                  {res.description}
+                                </p>
+                              )}
+                              {res.url && (
+                                <a
+                                  href={res.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-0.5 block max-w-sm truncate text-xs text-indigo-600 hover:underline"
+                                >
+                                  {res.url}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center justify-end">
+                            {isSent ? (
+                              <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+                                <Check className="h-3.5 w-3.5" weight="bold" />
+                                Sent via WhatsApp
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => void handleSend()}
+                                disabled={isSending || !hasPhone}
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all shadow-xs",
+                                  hasPhone
+                                    ? "bg-emerald-700 text-white hover:bg-emerald-800 active:scale-95"
+                                    : "bg-neutral-200 text-neutral-500 cursor-not-allowed",
+                                )}
+                              >
+                                <WhatsappLogo className="h-4 w-4" weight="fill" />
+                                <span>{isSending ? "Sending…" : "Send via WhatsApp"}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

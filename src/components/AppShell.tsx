@@ -11,6 +11,22 @@ import { EASE } from "../lib/animation";
 import { RouteLoadingOverlay } from "./RouteLoadingOverlay";
 import { Spinner } from "../components";
 
+import {
+  SquaresFour,
+  UserCircle,
+  GraduationCap,
+  CheckSquareOffset,
+  CalendarCheck,
+  ChatCircleDots,
+  Headset,
+  PlugsConnected,
+  SignOut,
+  CaretDoubleLeft,
+  CaretDoubleRight,
+  List,
+  X,
+} from "@phosphor-icons/react";
+
 const ROLE_LABELS: Record<string, string> = {
   architect: "Architect",
   field_coach: "Field Coach",
@@ -29,118 +45,6 @@ function initialsOf(name: string | null | undefined): string {
     .slice(0, 2)
     .join("")
     .toUpperCase();
-}
-
-// ---------------------------------------------------------------------------
-// Icons
-// ---------------------------------------------------------------------------
-
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.75}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-5 w-5 shrink-0"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
-function DashboardIcon() {
-  return (
-    <Icon>
-      <rect x="3" y="3" width="7" height="7" rx="1.5" />
-      <rect x="14" y="3" width="7" height="7" rx="1.5" />
-      <rect x="3" y="14" width="7" height="7" rx="1.5" />
-      <rect x="14" y="14" width="7" height="7" rx="1.5" />
-    </Icon>
-  );
-}
-
-function ProfileIcon() {
-  return (
-    <Icon>
-      <path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
-      <path d="M5 21a7 7 0 0 1 14 0" />
-    </Icon>
-  );
-}
-
-function CoursesIcon() {
-  return (
-    <Icon>
-      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-    </Icon>
-  );
-}
-
-function ApprovalsIcon() {
-  return (
-    <Icon>
-      <path d="M19 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z" />
-      <path d="m9 12 2 2 4-4" />
-    </Icon>
-  );
-}
-
-function CheckinsIcon() {
-  return (
-    <Icon>
-      <path d="M12 8v4l3 3" />
-      <path d="M21 12a9 9 0 1 1-3.52-7.07" />
-      <path d="M21 3v5h-5" />
-    </Icon>
-  );
-}
-
-function SignOutIcon() {
-  return (
-    <Icon>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="m16 17 5-5-5-5" />
-      <path d="M21 12H9" />
-    </Icon>
-  );
-}
-
-function CollapseIcon() {
-  return (
-    <Icon>
-      <path d="m11 17-5-5 5-5" />
-      <path d="m18 17-5-5 5-5" />
-    </Icon>
-  );
-}
-
-function ExpandIcon() {
-  return (
-    <Icon>
-      <path d="m13 17 5-5-5-5" />
-      <path d="m6 17 5-5-5-5" />
-    </Icon>
-  );
-}
-
-function HamburgerIcon() {
-  return (
-    <Icon>
-      <path d="M3 5h14M3 10h14M3 15h14" />
-    </Icon>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <Icon>
-      <path d="m6 6 8 8M14 6l-8 8" />
-    </Icon>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -169,14 +73,16 @@ function SidebarLink({
       title={expanded ? undefined : label}
       aria-label={expanded ? undefined : label}
       className={cn(
-        "flex items-center gap-3 rounded-xl text-sm font-medium transition-colors",
+        "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all",
         expanded ? "px-3 py-2.5" : "justify-center px-0 py-2.5",
         active
-          ? "bg-neutral-900 text-white"
+          ? "bg-neutral-900 text-white shadow-xs font-semibold"
           : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950",
       )}
     >
-      {icon}
+      <span className="shrink-0 transition-transform duration-150 group-hover:scale-110">
+        {icon}
+      </span>
       {expanded && <span className="truncate whitespace-nowrap">{label}</span>}
     </Link>
   );
@@ -200,7 +106,7 @@ function IconButton({
       title={title}
       aria-label={title}
       className={cn(
-        "rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
+        "rounded-lg p-2 text-neutral-500 transition-all hover:bg-neutral-100 hover:text-neutral-900 active:scale-95",
         className,
       )}
     >
@@ -215,12 +121,12 @@ function Avatar({ user }: { user: AuthUser | null }) {
       <img
         src={user.image}
         alt={user.name ?? "Profile picture"}
-        className="h-9 w-9 shrink-0 rounded-full border border-neutral-200 object-cover"
+        className="h-9 w-9 shrink-0 rounded-full border border-neutral-200 object-cover shadow-xs"
       />
     );
   }
   return (
-    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-neutral-100 text-xs font-semibold text-neutral-700">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-neutral-100 text-xs font-semibold text-neutral-700 shadow-xs">
       {initialsOf(user?.name)}
     </span>
   );
@@ -233,11 +139,9 @@ function IntegrationsCard({ expanded }: { expanded: boolean }) {
         <Link
           to="/integrations"
           title="Integrations"
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-200/60 bg-neutral-50 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-teal-200/60 bg-teal-50/50 text-teal-700 transition-all hover:bg-teal-100/70 hover:shadow-xs"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-          </svg>
+          <PlugsConnected size={19} weight="duotone" className="text-teal-600" />
         </Link>
       </div>
     );
@@ -247,19 +151,17 @@ function IntegrationsCard({ expanded }: { expanded: boolean }) {
     <div className="px-3 pb-3">
       <Link
         to="/integrations"
-        className="group flex items-center gap-3 overflow-hidden rounded-xl border border-neutral-200/60 bg-neutral-50 p-2 transition-all hover:border-neutral-300 hover:bg-neutral-100/80"
+        className="group flex items-center gap-3 overflow-hidden rounded-xl border border-neutral-200/70 bg-gradient-to-br from-neutral-50 to-neutral-100/50 p-2.5 transition-all hover:border-teal-300 hover:bg-teal-50/30 hover:shadow-xs"
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200/50 bg-white text-neutral-500 transition-colors group-hover:text-neutral-700">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-          </svg>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-teal-200/60 bg-white text-teal-600 shadow-xs transition-transform group-hover:scale-110">
+          <PlugsConnected size={18} weight="duotone" className="text-teal-600" />
         </div>
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium text-neutral-700 group-hover:text-neutral-950">
+          <span className="truncate text-sm font-semibold text-neutral-800 group-hover:text-neutral-950">
             Integrations
           </span>
-          <span className="truncate text-[11px] font-medium text-neutral-500">
-            Voice & Telephony
+          <span className="truncate text-[11px] font-medium text-teal-700/80">
+            Voice AI & Telephony
           </span>
         </div>
       </Link>
@@ -285,7 +187,7 @@ function UserFooter({
         <IconButton
           onClick={signOut}
           title="Sign out"
-          icon={<SignOutIcon />}
+          icon={<SignOut size={18} weight="duotone" className="text-neutral-500 hover:text-rose-600" />}
         />
       </div>
     );
@@ -303,7 +205,7 @@ function UserFooter({
       <IconButton
         onClick={signOut}
         title="Sign out"
-        icon={<SignOutIcon />}
+        icon={<SignOut size={18} weight="duotone" className="text-neutral-500 hover:text-rose-600" />}
       />
     </div>
   );
@@ -340,25 +242,88 @@ export function AppShell() {
   const pathname = useRouterState().location.pathname;
 
   const navItems = [
-    { to: "/", label: "Dashboard", icon: <DashboardIcon /> },
-    { to: "/profile", label: "Profile", icon: <ProfileIcon /> },
+    {
+      to: "/",
+      label: "Dashboard",
+      icon: (active: boolean) => (
+        <SquaresFour
+          size={20}
+          weight="duotone"
+          className={active ? "text-indigo-400" : "text-neutral-500 group-hover:text-indigo-600"}
+        />
+      ),
+    },
+    {
+      to: "/profile",
+      label: "Profile",
+      icon: (active: boolean) => (
+        <UserCircle
+          size={20}
+          weight="duotone"
+          className={active ? "text-neutral-300" : "text-neutral-500 group-hover:text-neutral-900"}
+        />
+      ),
+    },
   ];
   if (user?.role === "content_curator" || user?.role === "architect") {
-    navItems.push({ to: "/courses", label: "Courses", icon: <CoursesIcon /> });
-    navItems.push({ to: "/calls", label: "Call Logs", icon: <CheckinsIcon /> });
+    navItems.push({
+      to: "/courses",
+      label: "Courses",
+      icon: (active: boolean) => (
+        <GraduationCap
+          size={20}
+          weight="duotone"
+          className={active ? "text-emerald-400" : "text-neutral-500 group-hover:text-emerald-600"}
+        />
+      ),
+    });
+    navItems.push({
+      to: "/schedule",
+      label: "Schedule Calendar",
+      icon: (active: boolean) => (
+        <CalendarCheck
+          size={20}
+          weight="duotone"
+          className={active ? "text-blue-400" : "text-neutral-500 group-hover:text-blue-600"}
+        />
+      ),
+    });
+    navItems.push({
+      to: "/calls",
+      label: "Call Logs",
+      icon: (active: boolean) => (
+        <Headset
+          size={20}
+          weight="duotone"
+          className={active ? "text-sky-400" : "text-neutral-500 group-hover:text-sky-600"}
+        />
+      ),
+    });
   }
   if (user?.role === "architect") {
     navItems.push({
       to: "/courses/approvals",
       label: "Approvals",
-      icon: <ApprovalsIcon />,
+      icon: (active: boolean) => (
+        <CheckSquareOffset
+          size={20}
+          weight="duotone"
+          className={active ? "text-amber-400" : "text-neutral-500 group-hover:text-amber-600"}
+        />
+      ),
     });
   }
   if (user?.role && user.role !== "practitioner") {
     navItems.push({
       to: "/checkins",
       label: "Check-ins",
-      icon: <CheckinsIcon />,
+      icon: (active: boolean) => (
+        <ChatCircleDots
+          size={20}
+          weight="duotone"
+          className={active ? "text-purple-400" : "text-neutral-500 group-hover:text-purple-600"}
+        />
+      ),
     });
   }
 
@@ -371,23 +336,29 @@ export function AppShell() {
         /^\/courses\/[^/]+\/edit$/.test(pathname)
       );
     }
+    if (to === "/schedule") {
+      return pathname === "/schedule" || pathname === "/calendar";
+    }
     return pathname === to;
   };
 
   const expanded = !sidebarCollapsed;
 
   const renderNav = (navExpanded: boolean, onNavigate?: () => void) =>
-    navItems.map((item) => (
-      <SidebarLink
-        key={item.to}
-        to={item.to}
-        label={item.label}
-        expanded={navExpanded}
-        active={isActive(item.to)}
-        icon={item.icon}
-        onClick={onNavigate}
-      />
-    ));
+    navItems.map((item) => {
+      const active = isActive(item.to);
+      return (
+        <SidebarLink
+          key={item.to}
+          to={item.to}
+          label={item.label}
+          expanded={navExpanded}
+          active={active}
+          icon={item.icon(active)}
+          onClick={onNavigate}
+        />
+      );
+    });
 
   return (
     <div className="flex h-screen h-dvh overflow-hidden bg-neutral-50 font-sans">
@@ -423,7 +394,7 @@ export function AppShell() {
             <IconButton
               onClick={toggleSidebarCollapsed}
               title="Collapse sidebar"
-              icon={<CollapseIcon />}
+              icon={<CaretDoubleLeft size={18} weight="bold" />}
             />
           )}
         </div>
@@ -434,8 +405,8 @@ export function AppShell() {
             <IconButton
               onClick={toggleSidebarCollapsed}
               title="Expand sidebar"
-              icon={<ExpandIcon />}
-              className="mx-auto"
+              icon={<CaretDoubleRight size={18} weight="bold" />}
+              className="mx-auto mt-1"
             />
           )}
         </nav>
@@ -465,7 +436,7 @@ export function AppShell() {
             onClick={toggleSidebar}
             className="rounded-lg border border-neutral-200 p-2 text-neutral-700 transition-colors hover:bg-neutral-100"
           >
-            <HamburgerIcon />
+            <List size={20} weight="bold" />
           </button>
         </div>
 
@@ -511,7 +482,7 @@ export function AppShell() {
                   onClick={() => setSidebarOpen(false)}
                   className="rounded-lg border border-neutral-200 p-2 text-neutral-700 transition-colors hover:bg-neutral-100"
                 >
-                  <CloseIcon />
+                  <X size={20} weight="bold" />
                 </button>
               </div>
 
