@@ -1142,7 +1142,7 @@ export function CourseReviewPage() {
               )}
             </div>
             <VoiceSelector
-              selectedVoiceId={course.voice || "sarah"}
+              selectedVoiceId={course.voice || ""}
               selectedProvider={course.voiceProvider || "elevenlabs"}
               onSelectVoice={() => {}}
               readOnly={true}

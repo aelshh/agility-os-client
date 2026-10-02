@@ -212,6 +212,17 @@ export function CourseEditorPage() {
   const tabIndex = EDITOR_TABS.indexOf(activeTab);
   const isLastTab = tabIndex === EDITOR_TABS.length - 1;
 
+  const handleTabChange = (targetTab: string) => {
+    const targetIdx = EDITOR_TABS.indexOf(targetTab);
+    const voiceIdx = EDITOR_TABS.indexOf("voice");
+    if (targetIdx > voiceIdx && (!voice || !voice.trim())) {
+      setActiveTab("voice");
+      toast.error("Please select an AI coach voice persona before proceeding.");
+      return;
+    }
+    setActiveTab(targetTab);
+  };
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [knowledgeText, setKnowledgeText] = useState("");
@@ -228,7 +239,7 @@ export function CourseEditorPage() {
   const [savingAudience, setSavingAudience] = useState(false);
 
   // ── AI Coach Voice State ──
-  const [voice, setVoice] = useState("EXAVITQu4vr4xnSDxMaL");
+  const [voice, setVoice] = useState("");
   const [voiceProvider, setVoiceProvider] = useState("elevenlabs");
 
   // ── Phone Line State ──
@@ -1003,13 +1014,29 @@ export function CourseEditorPage() {
       };
     }
 
+    if (!voice || !voice.trim()) {
+      setActiveTab("voice");
+      return {
+        ok: false,
+        message: "An AI Coach voice persona is compulsory. Please select a voice before saving.",
+      };
+    }
+
+    if (!voiceProvider || !voiceProvider.trim()) {
+      setActiveTab("voice");
+      return {
+        ok: false,
+        message: "A TTS voice provider is required. Please select a provider before saving.",
+      };
+    }
+
     const input: CourseInput = {
       title: title.trim(),
       description: description.trim(),
       knowledgeText: knowledgeText.trim(),
       telenowKbId: selectedKbId ?? undefined,
-      voice: voice || "EXAVITQu4vr4xnSDxMaL",
-      voiceProvider: voiceProvider || "elevenlabs",
+      voice: voice.trim(),
+      voiceProvider: voiceProvider.trim(),
       phoneNumberId: phoneNumberId || null,
       phoneNumber: phoneNumber || null,
       faqs: cleanFaqs(),
@@ -1273,7 +1300,7 @@ export function CourseEditorPage() {
             { id: "schedule", label: "Schedule", icon: CalendarPlus, count: enableSchedule ? 1 : undefined },
           ]}
           active={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
         />
 
         {activeTab === "basics" && (
@@ -2776,7 +2803,7 @@ export function CourseEditorPage() {
                 <Button loading={submitting} onClick={runSubmit}><PaperPlaneTilt className="h-4 w-4 mr-1.5 shrink-0" weight="duotone" />Save & submit for review</Button>
               </div>
             ) : (
-              <Button onClick={() => setActiveTab(EDITOR_TABS[tabIndex + 1])}>Next <CaretRight className="h-4 w-4 ml-1.5 shrink-0" weight="bold" /></Button>
+              <Button onClick={() => handleTabChange(EDITOR_TABS[tabIndex + 1])}>Next <CaretRight className="h-4 w-4 ml-1.5 shrink-0" weight="bold" /></Button>
             )}
           </div>
         )}

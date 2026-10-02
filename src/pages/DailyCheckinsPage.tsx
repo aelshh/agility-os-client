@@ -388,7 +388,7 @@ function ScheduleForm({
   const [additionalUserIds, setAdditionalUserIds] = useState<string[]>(
     initial?.additionalUserIds ?? [],
   );
-  const [voice, setVoice] = useState(initial?.voice ?? "cgSgspJ2msm6clMCkdW9");
+  const [voice, setVoice] = useState(initial?.voice ?? "");
   const [voiceProvider, setVoiceProvider] = useState(
     initial?.voiceProvider ?? "elevenlabs",
   );
@@ -447,6 +447,10 @@ function ScheduleForm({
     }
     if (!/^\d{2}:\d{2}$/.test(timeLocal)) {
       toast.error("Pick a time (HH:MM).");
+      return;
+    }
+    if (!voice || !voice.trim()) {
+      toast.error("Please select an AI assistant voice persona before saving.");
       return;
     }
     const scriptToSave = serializeQuestionsToScript(questions);
