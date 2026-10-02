@@ -8,6 +8,7 @@ import type {
   Course,
   CourseDocument,
   CourseInput,
+  CourseWhatsappResource,
   RubricCriterion,
   TelenowKbDocument,
   TelenowKnowledgeBase,
@@ -24,11 +25,20 @@ import {
   apiGenerateRubricDraft,
   apiGetCourse,
   apiGetCourseKnowledgeBase,
+  apiPreviewCourseWhatsappMessage,
   apiSubmitCourse,
   apiUpdateCourse,
   apiUpdateCourseAudience,
   apiUploadCourseKbFileDoc,
 } from "../api/courses";
+import {
+  apiCreateCourseSchedule,
+  apiListCourseSchedules,
+  apiUpdateCourseSchedule,
+  type CourseSchedule,
+  type CourseScheduleType,
+} from "../api/schedules";
+import { TIMEZONES } from "../data/options";
 import { Button, Spinner, Tabs, Modal } from "../components";
 import { AudiencePicker } from "../features/courses/AudiencePicker";
 import { RubricList } from "../features/courses/RubricList";
@@ -42,6 +52,35 @@ import {
 import { apiGetNumbers, type WorkspacePhoneNumber } from "../api/telephony";
 import { cn } from "../lib/cn";
 import { pageVariants, fadeUp } from "../lib/animation";
+
+import {
+  ArrowLeft,
+  BookOpen,
+  CalendarPlus,
+  CaretRight,
+  ChatCenteredText,
+  Check,
+  CloudArrowUp,
+  Database,
+  FileText,
+  FileZip,
+  FloppyDisk,
+  FolderOpen,
+  GlobeSimple,
+  LinkSimple,
+  MicrophoneStage,
+  PaperPlaneTilt,
+  PhoneCall,
+  SlidersHorizontal,
+  Trash,
+  Trophy,
+  UsersThree,
+  VideoCamera,
+  WarningCircle,
+  WhatsappLogo,
+  X,
+} from "@phosphor-icons/react";
+import { IconBadge } from "../components/ui/IconBadge";
 
 const labelClasses = "text-sm font-medium text-neutral-600";
 
@@ -74,7 +113,25 @@ function isTextDoc(file: File): boolean {
   return TEXT_DOC_EXTS.has(ext) || file.type.startsWith("text/");
 }
 
-const EDITOR_TABS = ["basics", "knowledge", "voice", "questions", "rubric", "audience"];
+const EDITOR_TABS = ["basics", "knowledge", "voice", "questions", "rubric", "audience", "schedule"];
+
+const DAYS_OF_WEEK_OPTIONS = [
+  { id: 1, label: "Mon", full: "Monday" },
+  { id: 2, label: "Tue", full: "Tuesday" },
+  { id: 3, label: "Wed", full: "Wednesday" },
+  { id: 4, label: "Thu", full: "Thursday" },
+  { id: 5, label: "Fri", full: "Friday" },
+  { id: 6, label: "Sat", full: "Saturday" },
+  { id: 0, label: "Sun", full: "Sunday" },
+];
+
+const ADVANCE_NOTICE_OPTIONS = [
+  { value: 5, label: "5 minutes prior" },
+  { value: 10, label: "10 minutes prior" },
+  { value: 15, label: "15 minutes prior (Recommended)" },
+  { value: 30, label: "30 minutes prior" },
+  { value: 60, label: "1 hour prior" },
+];
 
 let rubricIdCounter = 0;
 const nextRubricId = () => `rc-${rubricIdCounter++}`;
@@ -133,6 +190,10 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function WhatsAppIcon({ className }: { className?: string }) {
+  return <WhatsappLogo className={className} weight="fill" aria-hidden="true" />;
+}
+
 export function CourseEditorPage() {
   const router = useRouter();
   const params = useParams({ strict: false });
@@ -184,6 +245,48 @@ export function CourseEditorPage() {
   const [kbDocuments, setKbDocuments] = useState<TelenowKbDocument[]>([]);
   const [loadingKb, setLoadingKb] = useState(false);
   const [selectedKbId, setSelectedKbId] = useState<string | null>(null);
+
+  // ── WhatsApp Deliverable Resources State ──
+  const [whatsappResources, setWhatsappResources] = useState<CourseWhatsappResource[]>([]);
+  const [addVideoModalOpen, setAddVideoModalOpen] = useState(false);
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoDesc, setVideoDesc] = useState("");
+  const [videoTrigger, setVideoTrigger] =
+    useState<CourseWhatsappResource["deliveryTrigger"]>("during_call");
+  const [videoCaption, setVideoCaption] = useState("");
+
+  const [addLinkModalOpen, setAddLinkModalOpen] = useState(false);
+  const [linkTitle, setLinkTitle] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkDesc, setLinkDesc] = useState("");
+  const [linkTrigger, setLinkTrigger] =
+    useState<CourseWhatsappResource["deliveryTrigger"]>("during_call");
+  const [linkCaption, setLinkCaption] = useState("");
+
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewResource, setPreviewResource] =
+    useState<CourseWhatsappResource | null>(null);
+  const [previewText, setPreviewText] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // ── Course Schedule State ──
+  const [enableSchedule, setEnableSchedule] = useState(false);
+  const [scheduleType, setScheduleType] = useState<CourseScheduleType>("recurring");
+  const [scheduleStartDate, setScheduleStartDate] = useState(
+    () => new Date().toISOString().slice(0, 10),
+  );
+  const [scheduleEndDate, setScheduleEndDate] = useState("");
+  const [scheduleDaysOfWeek, setScheduleDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [scheduleWindowStart, setScheduleWindowStart] = useState("09:00");
+  const [scheduleWindowEnd, setScheduleWindowEnd] = useState("18:00");
+  const [scheduleTimezone, setScheduleTimezone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata",
+  );
+  const [scheduleNotifyWhatsapp, setScheduleNotifyWhatsapp] = useState(true);
+  const [scheduleNotifyMinutes, setScheduleNotifyMinutes] = useState(15);
+  const [scheduleCustomMessage, setScheduleCustomMessage] = useState("");
+  const [existingSchedule, setExistingSchedule] = useState<CourseSchedule | null>(null);
 
   // Staged items for new course draft
   const [pendingFiles, setPendingFiles] = useState<ProcessedKbFile[]>([]);
@@ -246,6 +349,9 @@ export function CourseEditorPage() {
         setExpiresAt(course.expiresAt ? course.expiresAt.slice(0, 16) : "");
         setAudienceIds(Array.isArray(course.audienceIds) ? course.audienceIds : []);
         setDraftAudience(null);
+        if (Array.isArray(course.whatsappResources)) {
+          setWhatsappResources(course.whatsappResources);
+        }
         if (course.voice) setVoice(course.voice);
         if (course.voiceProvider) setVoiceProvider(course.voiceProvider);
         if (course.phoneNumberId) setPhoneNumberId(course.phoneNumberId);
@@ -259,6 +365,32 @@ export function CourseEditorPage() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
+    apiListCourseSchedules({ courseId })
+      .then((scheds) => {
+        if (cancelled) return;
+        if (scheds && scheds.length > 0) {
+          const sch = scheds[0];
+          setExistingSchedule(sch);
+          setEnableSchedule(true);
+          setScheduleType(sch.scheduleType);
+          setScheduleStartDate(sch.startDate || new Date().toISOString().slice(0, 10));
+          setScheduleEndDate(sch.endDate || "");
+          setScheduleDaysOfWeek(sch.daysOfWeek || [1, 2, 3, 4, 5]);
+          setScheduleWindowStart(sch.timeWindowStart || "09:00");
+          setScheduleWindowEnd(sch.timeWindowEnd || "18:00");
+          setScheduleTimezone(
+            sch.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata",
+          );
+          setScheduleNotifyWhatsapp(sch.notifyWhatsappPrior ?? true);
+          setScheduleNotifyMinutes(sch.notifyMinutesBefore ?? 15);
+          setScheduleCustomMessage(sch.customMessage || "");
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load course schedule", err);
+      });
+
     return () => {
       cancelled = true;
     };
@@ -717,6 +849,130 @@ export function CourseEditorPage() {
     }
   };
 
+  // ── WhatsApp Resource Handlers ──
+  const handleAddVideoResource = (e: FormEvent) => {
+    e.preventDefault();
+    if (!videoUrl.trim() || !videoTitle.trim()) {
+      toast.error("Please provide both a video title and URL.");
+      return;
+    }
+    const newRes: CourseWhatsappResource = {
+      id: `wa-vid-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      type: "video",
+      title: videoTitle.trim(),
+      description: videoDesc.trim() || undefined,
+      url: videoUrl.trim(),
+      deliveryTrigger: videoTrigger,
+      caption: videoCaption.trim() || undefined,
+      enabled: true,
+    };
+    setWhatsappResources((prev) => [...prev, newRes]);
+    setVideoTitle("");
+    setVideoUrl("");
+    setVideoDesc("");
+    setVideoCaption("");
+    setVideoTrigger("during_call");
+    setAddVideoModalOpen(false);
+    toast.success("WhatsApp video resource added.");
+  };
+
+  const handleAddLinkResource = (e: FormEvent) => {
+    e.preventDefault();
+    if (!linkUrl.trim() || !linkTitle.trim()) {
+      toast.error("Please provide both a link title and valid URL.");
+      return;
+    }
+    const newRes: CourseWhatsappResource = {
+      id: `wa-lnk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      type: "link",
+      title: linkTitle.trim(),
+      description: linkDesc.trim() || undefined,
+      url: linkUrl.trim(),
+      deliveryTrigger: linkTrigger,
+      caption: linkCaption.trim() || undefined,
+      enabled: true,
+    };
+    setWhatsappResources((prev) => [...prev, newRes]);
+    setLinkTitle("");
+    setLinkUrl("");
+    setLinkDesc("");
+    setLinkCaption("");
+    setLinkTrigger("during_call");
+    setAddLinkModalOpen(false);
+    toast.success("WhatsApp web resource added.");
+  };
+
+  const handleToggleDocumentWhatsApp = (doc: { id: string; title: string; storageUrl?: string | null; sourceType?: string }) => {
+    const existing = whatsappResources.find(
+      (r) => r.documentId === doc.id || (r.title === doc.title && (r.type === "pdf" || r.type === "document")),
+    );
+    if (existing) {
+      setWhatsappResources((prev) => prev.filter((r) => r.id !== existing.id));
+      toast.info(`Removed "${doc.title}" from WhatsApp deliverables.`);
+    } else {
+      const isPdf = doc.title.toLowerCase().endsWith(".pdf") || doc.sourceType === "file" || doc.sourceType === "upload";
+      const newRes: CourseWhatsappResource = {
+        id: `wa-doc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: isPdf ? "pdf" : "document",
+        title: doc.title,
+        url: doc.storageUrl || "",
+        documentId: doc.id,
+        deliveryTrigger: "during_call",
+        enabled: true,
+      };
+      setWhatsappResources((prev) => [...prev, newRes]);
+      toast.success(`"${doc.title}" enabled for WhatsApp delivery.`);
+    }
+  };
+
+  const handleRemoveWhatsappResource = (resId: string) => {
+    setWhatsappResources((prev) => prev.filter((r) => r.id !== resId));
+    toast.info("WhatsApp resource removed.");
+  };
+
+  const handleToggleWhatsappResourceActive = (resId: string) => {
+    setWhatsappResources((prev) =>
+      prev.map((r) => (r.id === resId ? { ...r, enabled: !r.enabled } : r)),
+    );
+  };
+
+  const handleUpdateWhatsappResourceTrigger = (
+    resId: string,
+    deliveryTrigger: CourseWhatsappResource["deliveryTrigger"],
+  ) => {
+    setWhatsappResources((prev) =>
+      prev.map((r) => (r.id === resId ? { ...r, deliveryTrigger } : r)),
+    );
+  };
+
+  const handleOpenPreviewWhatsapp = async (resource: CourseWhatsappResource) => {
+    setPreviewResource(resource);
+    setPreviewModalOpen(true);
+    setPreviewLoading(true);
+    try {
+      if (courseId) {
+        const res = await apiPreviewCourseWhatsappMessage(courseId, {
+          resource,
+          courseTitle: title || undefined,
+        });
+        setPreviewText(res.message);
+      } else {
+        let text = `*Agility OS Training Resource*\n\n📚 *${title || "Course"}*\n\nHey there! Here is the learning resource for your practice session:`;
+        if (resource.title) text += `\n\n📌 *${resource.title}*`;
+        if (resource.description) text += `\n_${resource.description}_`;
+        if (resource.caption) text += `\n\n💬 ${resource.caption}`;
+        if (resource.url) text += `\n\n🔗 ${resource.url}`;
+        setPreviewText(text);
+      }
+    } catch {
+      let text = `*Agility OS Training Resource*\n\n📚 *${title || "Course"}*\n\nHere is your requested learning resource:\n\n📌 *${resource.title}*`;
+      if (resource.url) text += `\n\n🔗 ${resource.url}`;
+      setPreviewText(text);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const buildInput = (): { ok: boolean; input?: CourseInput; message?: string } => {
     const cleaned = criteria.map((c) => ({
       name: c.name.trim(),
@@ -766,10 +1022,40 @@ export function CourseEditorPage() {
     if (expiresAt.trim()) input.expiresAt = new Date(expiresAt).toISOString();
     else input.expiresAt = null;
     input.audienceIds = audienceIds;
+    input.whatsappResources = whatsappResources;
     return { ok: true, input };
   };
 
   const goBack = () => void router.navigate({ to: "/courses" });
+
+  const syncSchedule = async (targetCourseId: string) => {
+    if (!enableSchedule) return;
+    const schedInput = {
+      courseId: targetCourseId,
+      title: `${title.trim() || "Course"} Practice Schedule`,
+      scheduleType,
+      startDate: scheduleStartDate || new Date().toISOString().slice(0, 10),
+      endDate: scheduleEndDate.trim() || null,
+      daysOfWeek: scheduleDaysOfWeek,
+      timeWindowStart: scheduleWindowStart || "09:00",
+      timeWindowEnd: scheduleWindowEnd || "18:00",
+      timezone: scheduleTimezone || "Asia/Kolkata",
+      notifyWhatsappPrior: scheduleNotifyWhatsapp,
+      notifyMinutesBefore: scheduleNotifyMinutes,
+      customMessage: scheduleCustomMessage.trim() || null,
+      audienceType: "course_default" as const,
+    };
+    try {
+      if (existingSchedule?.id) {
+        await apiUpdateCourseSchedule(existingSchedule.id, schedInput);
+      } else {
+        await apiCreateCourseSchedule(schedInput);
+      }
+    } catch (schErr) {
+      console.error("Failed to save schedule for course:", schErr);
+      toast.error("Course saved, but schedule synchronization failed.");
+    }
+  };
 
   const runSave = async () => {
     if (readOnly) return;
@@ -785,12 +1071,14 @@ export function CourseEditorPage() {
       if (isNew) {
         const created = await apiCreateCourse(built.input);
         await uploadPendingKbItems(created.id);
+        await syncSchedule(created.id);
         setPendingFiles([]);
         setPendingTextDocs([]);
         setPendingUrls([]);
-        toast.success("Course created.");
+        toast.success("Course created and schedule configured.");
       } else if (courseId) {
         await apiUpdateCourse(courseId, built.input);
+        await syncSchedule(courseId);
         toast.success("Course saved.");
       }
       goBack();
@@ -818,6 +1106,7 @@ export function CourseEditorPage() {
       if (isNew) {
         const created = await apiCreateCourse(built.input);
         await uploadPendingKbItems(created.id);
+        await syncSchedule(created.id);
         setPendingFiles([]);
         setPendingTextDocs([]);
         setPendingUrls([]);
@@ -829,6 +1118,7 @@ export function CourseEditorPage() {
         ) {
           await apiUpdateCourse(courseId, built.input);
         }
+        await syncSchedule(courseId);
         await apiSubmitCourse(courseId);
       }
       toast.success("Course submitted for review.");
@@ -967,18 +1257,20 @@ export function CourseEditorPage() {
       >
         <Tabs
           items={[
-            { id: "basics", label: "Basics" },
+            { id: "basics", label: "Basics", icon: SlidersHorizontal },
             {
               id: "knowledge",
               label: "Knowledge base",
+              icon: Database,
               count: isNew
                 ? pendingFiles.length + pendingTextDocs.length + pendingUrls.length
                 : kbDocuments.length,
             },
-            { id: "voice", label: "Coach voice" },
-            { id: "questions", label: "Practice questions", count: faqs.length },
-            { id: "rubric", label: "Scoring rubric" },
-            { id: "audience", label: "Audience", count: effectiveAudience.length },
+            { id: "voice", label: "Coach voice", icon: MicrophoneStage },
+            { id: "questions", label: "Practice questions", icon: ChatCenteredText, count: faqs.length },
+            { id: "rubric", label: "Scoring rubric", icon: Trophy },
+            { id: "audience", label: "Audience", icon: UsersThree, count: effectiveAudience.length },
+            { id: "schedule", label: "Schedule", icon: CalendarPlus, count: enableSchedule ? 1 : undefined },
           ]}
           active={activeTab}
           onChange={setActiveTab}
@@ -1068,24 +1360,14 @@ export function CourseEditorPage() {
             description="Upload documents, write notes, or import webpages for this course. Everything added here is automatically embedded into the course's dedicated Knowledge Base to ground the Voice AI Coach."
           >
             {/* Knowledge Base Overview */}
-            <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:flex-row sm:items-center sm:justify-between shadow-2xs">
               <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white shadow-sm">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    className="h-5 w-5"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
-                    />
-                  </svg>
-                </div>
+                <IconBadge
+                  icon={Database}
+                  variant="emerald"
+                  size="lg"
+                  weight="duotone"
+                />
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="truncate text-sm font-semibold text-neutral-950">
@@ -1095,7 +1377,7 @@ export function CourseEditorPage() {
                           ? `Knowledge Base: ${title.trim()}`
                           : "Course Knowledge Base")}
                     </h3>
-                    <span className="inline-flex items-center rounded-md bg-neutral-200/80 px-2 py-0.5 text-[10px] font-medium tracking-wide text-neutral-700 uppercase">
+                    <span className="inline-flex items-center rounded-md bg-emerald-100/80 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-800 uppercase">
                       AI Grounded
                     </span>
                   </div>
@@ -1123,23 +1405,15 @@ export function CourseEditorPage() {
               }`}
             >
               {isDraggingOver && (
-                <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-900 bg-white/95 backdrop-blur-xs p-6 text-center shadow-lg">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-md">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      className="h-6 w-6"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                      />
-                    </svg>
-                  </div>
-                  <h4 className="mt-3 text-sm font-semibold text-neutral-950">
+                <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-emerald-500 bg-white/95 backdrop-blur-xs p-6 text-center shadow-lg">
+                  <IconBadge
+                    icon={CloudArrowUp}
+                    variant="emerald"
+                    size="xl"
+                    weight="duotone"
+                    className="mb-2"
+                  />
+                  <h4 className="mt-2 text-sm font-semibold text-neutral-950">
                     Drop files, folders, or ZIP archives here
                   </h4>
                   <p className="mt-1 text-xs text-neutral-500">
@@ -1183,20 +1457,7 @@ export function CourseEditorPage() {
                       onClick={() => fileInputRef.current?.click()}
                       className="h-9 px-3.5"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                        />
-                      </svg>
+                      <FileZip className="h-4 w-4 shrink-0" weight="duotone" />
                       Upload document / ZIP
                     </Button>
                     <Button
@@ -1207,20 +1468,7 @@ export function CourseEditorPage() {
                       onClick={() => folderInputRef.current?.click()}
                       className="h-9 px-3.5"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                        />
-                      </svg>
+                      <FolderOpen className="h-4 w-4 shrink-0" weight="duotone" />
                       Upload folder
                     </Button>
                     <Button
@@ -1230,20 +1478,7 @@ export function CourseEditorPage() {
                       onClick={() => setAddTextModalOpen(true)}
                       className="h-9 px-3.5"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                        />
-                      </svg>
+                      <FileText className="h-4 w-4 shrink-0" weight="duotone" />
                       Add text note
                     </Button>
                     <Button
@@ -1253,20 +1488,7 @@ export function CourseEditorPage() {
                       onClick={() => setAddUrlModalOpen(true)}
                       className="h-9 px-3.5"
                     >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        className="h-4 w-4 shrink-0"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253"
-                        />
-                      </svg>
+                      <GlobeSimple className="h-4 w-4 shrink-0" weight="duotone" />
                       Import webpage
                     </Button>
                   </div>
@@ -1285,22 +1507,13 @@ export function CourseEditorPage() {
                 pendingTextDocs.length === 0 &&
                 pendingUrls.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 px-6 py-12 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-neutral-400">
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.5}
-                        className="h-6 w-6"
-                        aria-hidden="true"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                        />
-                      </svg>
-                    </div>
+                    <IconBadge
+                      icon={BookOpen}
+                      variant="emerald"
+                      size="xl"
+                      weight="duotone"
+                      className="mb-1"
+                    />
                     <h4 className="mt-3 text-sm font-semibold text-neutral-900">
                       Your knowledge base is empty
                     </h4>
@@ -1316,20 +1529,7 @@ export function CourseEditorPage() {
                           onClick={() => fileInputRef.current?.click()}
                           className="h-9 px-3.5"
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                            className="h-4 w-4 shrink-0"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-                            />
-                          </svg>
+                          <FileZip className="h-4 w-4 shrink-0" weight="duotone" />
                           Upload document / ZIP
                         </Button>
                         <Button
@@ -1339,20 +1539,7 @@ export function CourseEditorPage() {
                           onClick={() => folderInputRef.current?.click()}
                           className="h-9 px-3.5"
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                            className="h-4 w-4 shrink-0"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                            />
-                          </svg>
+                          <FolderOpen className="h-4 w-4 shrink-0" weight="duotone" />
                           Upload folder
                         </Button>
                         <Button
@@ -1362,20 +1549,7 @@ export function CourseEditorPage() {
                           onClick={() => setAddTextModalOpen(true)}
                           className="h-9 px-3.5"
                         >
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                            className="h-4 w-4 shrink-0"
-                            aria-hidden="true"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                            />
-                          </svg>
+                          <FileText className="h-4 w-4 shrink-0" weight="duotone" />
                           Add text note
                         </Button>
                       </div>
@@ -1391,51 +1565,9 @@ export function CourseEditorPage() {
                     >
                       <div className="flex min-w-0 items-start gap-3">
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
-                          {(doc.sourceType === "file" || doc.sourceType === "upload") && (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                              />
-                            </svg>
-                          )}
-                          {(doc.sourceType === "text" || doc.sourceType === "inline") && (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-                              />
-                            </svg>
-                          )}
-                          {doc.sourceType === "url" && (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253"
-                              />
-                            </svg>
-                          )}
+                          {(doc.sourceType === "file" || doc.sourceType === "upload") && <FileText className="h-4 w-4" weight="duotone" />}
+                          {(doc.sourceType === "text" || doc.sourceType === "inline") && <FileText className="h-4 w-4" weight="duotone" />}
+                          {doc.sourceType === "url" && <GlobeSimple className="h-4 w-4" weight="duotone" />}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-neutral-900">
@@ -1472,22 +1604,49 @@ export function CourseEditorPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <div className="flex flex-wrap items-center justify-between gap-2.5 sm:justify-end">
+                        {/* WhatsApp Deliverable Badge / Toggle Button */}
+                        {(() => {
+                          const waRes = whatsappResources.find(
+                            (r) => r.documentId === doc.id || (r.title === doc.title && (r.type === "pdf" || r.type === "document")),
+                          );
+                          if (waRes) {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 shadow-2xs">
+                                <WhatsappLogo className="h-3.5 w-3.5 text-emerald-600 shrink-0" weight="fill" />
+                                <span>WhatsApp: {waRes.deliveryTrigger.replace("_", " ")}</span>
+                                {!readOnly && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleDocumentWhatsApp(doc)}
+                                    className="ml-1 text-emerald-700 hover:text-red-600 transition-colors"
+                                    title="Disable WhatsApp delivery for this doc"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </span>
+                            );
+                          }
+                          if (!readOnly) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDocumentWhatsApp(doc)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-800 transition-colors shadow-2xs"
+                              >
+                                <WhatsappLogo className="h-3.5 w-3.5 text-emerald-600 shrink-0" weight="fill" />
+                                <span>Send via WhatsApp</span>
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         {/* Status Badges */}
                         {doc.status === "embedded" && (
                           <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                            <svg
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                              className="h-3 w-3"
-                              aria-hidden="true"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            <Check className="h-3 w-3 text-emerald-600" weight="bold" />
                             Embedded
                           </span>
                         )}
@@ -1504,41 +1663,13 @@ export function CourseEditorPage() {
                             className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700"
                             title={doc.errorMessage || doc.error || "Processing failed"}
                           >
-                            <svg
-                              viewBox="0 0 20 20"
-                              fill="currentColor"
-                              className="h-3 w-3 text-red-600"
-                              aria-hidden="true"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
+                            <WarningCircle className="h-3.5 w-3.5 text-red-600" weight="duotone" />
                             Failed
                           </span>
                         )}
 
                         {!readOnly && (
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteDoc(doc.id)}
-                            aria-label={`Remove ${doc.title}`}
-                            className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                          >
-                            <svg
-                              viewBox="0 0 20 20"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              strokeLinecap="round"
-                              className="h-4 w-4"
-                              aria-hidden="true"
-                            >
-                              <path d="M5 5l10 10M15 5L5 15" />
-                            </svg>
-                          </button>
+                          <button type="button" onClick={() => void handleDeleteDoc(doc.id)} aria-label={`Remove ${doc.title}`} className="shrink-0 rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-red-50 hover:text-red-600"><Trash className="h-4 w-4" weight="duotone" /></button>
                         )}
                       </div>
                     </li>
@@ -1552,35 +1683,7 @@ export function CourseEditorPage() {
                     >
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200 text-neutral-600">
-                          {item.relativePath.includes("/") ? (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"
-                              />
-                            </svg>
-                          ) : (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={1.8}
-                              className="h-4 w-4"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-                              />
-                            </svg>
-                          )}
+                          {item.relativePath.includes("/") ? <FolderOpen className="h-4 w-4" weight="duotone" /> : <FileText className="h-4 w-4" weight="duotone" />}
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-neutral-900">
@@ -1628,21 +1731,7 @@ export function CourseEditorPage() {
                       className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/50 p-3"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200 text-neutral-600">
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                            className="h-4 w-4"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-                            />
-                          </svg>
-                        </div>
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200 text-neutral-600"><FileText className="h-4 w-4" weight="duotone" /></div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-neutral-900">
                             {item.title}
@@ -1684,21 +1773,7 @@ export function CourseEditorPage() {
                       className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-neutral-300 bg-neutral-50/50 p-3"
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200 text-neutral-600">
-                          <svg
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={1.8}
-                            className="h-4 w-4"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-.778.099-1.533.284-2.253"
-                            />
-                          </svg>
-                        </div>
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-200 text-neutral-600"><GlobeSimple className="h-4 w-4" weight="duotone" /></div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-neutral-900">
                             {item.title}
@@ -1735,6 +1810,181 @@ export function CourseEditorPage() {
                 </ul>
               )}
             </div>
+            </div>
+
+            {/* ── WhatsApp Learning Deliverables Section ── */}
+            <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                    <WhatsAppIcon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold text-neutral-950">
+                        WhatsApp Deliverable Resources
+                      </h3>
+                      <span className="inline-flex items-center rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 uppercase">
+                        Omnichannel Learning
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-neutral-600">
+                      Configure shareable videos (YouTube, Loom, Vimeo), cheat sheets, PDFs, and web links that can be sent directly to learners over WhatsApp during practice calls, immediately after session analysis, or upon course enrollment.
+                    </p>
+                  </div>
+                </div>
+
+                {!readOnly && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="button" size="sm" onClick={() => setAddVideoModalOpen(true)} className="h-9 px-3.5 bg-emerald-700 hover:bg-emerald-800 text-white"><VideoCamera className="h-4 w-4 mr-1 shrink-0" weight="duotone" />Add Video Link</Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setAddLinkModalOpen(true)} className="h-9 px-3.5 border-emerald-300 text-emerald-900 hover:bg-emerald-50"><LinkSimple className="h-4 w-4 mr-1 shrink-0" weight="bold" />Add Web Link</Button>
+                  </div>
+                )}
+              </div>
+
+              {/* WhatsApp Resources List */}
+              {whatsappResources.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-emerald-200 bg-white/80 py-8 px-4 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <WhatsAppIcon className="h-5 w-5" />
+                  </div>
+                  <h4 className="mt-2 text-xs font-semibold text-neutral-900">
+                    No WhatsApp deliverables configured yet
+                  </h4>
+                  <p className="mt-1 max-w-md text-xs text-neutral-500">
+                    Add video walkthroughs or links above, or click "Send via WhatsApp" on any uploaded knowledge base document.
+                  </p>
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-2.5">
+                  {whatsappResources.map((res) => (
+                    <li
+                      key={res.id}
+                      className={cn(
+                        "flex flex-col gap-3 rounded-xl border bg-white p-3.5 shadow-xs transition-all sm:flex-row sm:items-center sm:justify-between",
+                        res.enabled ? "border-emerald-200" : "border-neutral-200 opacity-65",
+                      )}
+                    >
+                      <div className="flex min-w-0 items-start gap-3">
+                        <div
+                          className={cn(
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-semibold",
+                            res.type === "video"
+                              ? "bg-red-100 text-red-700"
+                              : res.type === "pdf"
+                                ? "bg-amber-100 text-amber-700"
+                                : res.type === "link"
+                                  ? "bg-sky-100 text-sky-700"
+                                  : "bg-emerald-100 text-emerald-700",
+                          )}
+                        >
+                          {res.type === "video" && <VideoCamera className="h-4 w-4" weight="duotone" />}
+                          {res.type === "pdf" && (
+                            <span className="font-bold text-[10px]">PDF</span>
+                          )}
+                          {res.type === "link" && <LinkSimple className="h-4 w-4" weight="bold" />}
+                          {res.type === "document" && <FileText className="h-4 w-4" weight="duotone" />}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-sm text-neutral-900 truncate">
+                              {res.title}
+                            </span>
+                            <span className="rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-600 uppercase">
+                              {res.type}
+                            </span>
+                          </div>
+
+                          {res.description && (
+                            <p className="mt-0.5 text-xs text-neutral-500 truncate max-w-md">
+                              {res.description}
+                            </p>
+                          )}
+
+                          {res.url && (
+                            <a
+                              href={res.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-0.5 block max-w-sm truncate text-xs text-indigo-600 hover:underline"
+                            >
+                              {res.url}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+                        {/* Delivery Trigger Selector */}
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-neutral-500 font-medium">Trigger:</span>
+                          <select
+                            value={res.deliveryTrigger}
+                            disabled={readOnly}
+                            onChange={(e) =>
+                              handleUpdateWhatsappResourceTrigger(
+                                res.id,
+                                e.target.value as CourseWhatsappResource["deliveryTrigger"],
+                              )
+                            }
+                            className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-800 outline-none focus:border-neutral-900"
+                          >
+                            <option value="during_call">In-Call (Live Share)</option>
+                            <option value="post_call">Post-Call (Summary)</option>
+                            <option value="on_enroll">On Enrollment</option>
+                            <option value="manual">Manual Dispatch</option>
+                          </select>
+                        </div>
+
+                        {/* Active Switch */}
+                        <button
+                          type="button"
+                          disabled={readOnly}
+                          onClick={() => handleToggleWhatsappResourceActive(res.id)}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors",
+                            res.enabled
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300",
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "h-2 w-2 rounded-full",
+                              res.enabled ? "bg-emerald-600" : "bg-neutral-400",
+                            )}
+                          />
+                          {res.enabled ? "Active" : "Paused"}
+                        </button>
+
+                        {/* Preview Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPreviewWhatsapp(res)}
+                          className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50 shadow-2xs"
+                        >
+                          Preview
+                        </button>
+
+                        {/* Delete Button */}
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveWhatsappResource(res.id)}
+                            className="rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            aria-label={`Delete ${res.title}`}
+                          >
+                            <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </SectionCard>
         )}
@@ -2184,6 +2434,318 @@ export function CourseEditorPage() {
         </SectionCard>
         )}
 
+        {activeTab === "schedule" && (
+          <SectionCard
+            title="Practice Schedule"
+            description="Configure automated practice calling windows and prior WhatsApp reminders for this course. Scheduled sessions appear directly on the Schedule & Calendar."
+          >
+            {/* Enable Schedule Toggle Card */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-neutral-200 bg-neutral-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <IconBadge icon={CalendarPlus} variant="blue" size="lg" weight="duotone" />
+                <div>
+                  <h3 className="font-semibold text-neutral-950 text-sm">
+                    Automated Practice Calling Schedule
+                  </h3>
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    When enabled, the Voice AI Coach will initiate practice calls to enrolled practitioners during the specified window.
+                  </p>
+                </div>
+              </div>
+
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={enableSchedule}
+                  onChange={(e) => setEnableSchedule(e.target.checked)}
+                  disabled={readOnly}
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-neutral-200 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-neutral-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-neutral-950 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+              </label>
+            </div>
+
+            {enableSchedule && (
+              <div className="space-y-6 pt-2">
+                {/* Cadence Selection */}
+                <div className="flex flex-col gap-2">
+                  <span className={labelClasses}>Schedule Cadence</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => setScheduleType("recurring")}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
+                        scheduleType === "recurring"
+                          ? "border-neutral-900 bg-neutral-900/[0.03] ring-1 ring-neutral-900"
+                          : "border-neutral-200 bg-white hover:border-neutral-300",
+                      )}
+                    >
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-400 mt-0.5">
+                        {scheduleType === "recurring" && (
+                          <div className="h-2.5 w-2.5 rounded-full bg-neutral-950" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-950">Recurring Weekly</p>
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          Runs on selected days every week (e.g. Mon–Fri, or custom days)
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={readOnly}
+                      onClick={() => setScheduleType("one_time")}
+                      className={cn(
+                        "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
+                        scheduleType === "one_time"
+                          ? "border-neutral-900 bg-neutral-900/[0.03] ring-1 ring-neutral-900"
+                          : "border-neutral-200 bg-white hover:border-neutral-300",
+                      )}
+                    >
+                      <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-400 mt-0.5">
+                        {scheduleType === "one_time" && (
+                          <div className="h-2.5 w-2.5 rounded-full bg-neutral-950" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-950">One-Time Specific Date</p>
+                        <p className="mt-0.5 text-xs text-neutral-500">
+                          Runs only on a single chosen date within the calling hours
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Days of Week (if recurring) */}
+                {scheduleType === "recurring" && (
+                  <div className="flex flex-col gap-2">
+                    <span className={labelClasses}>Repeat on Days</span>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS_OF_WEEK_OPTIONS.map((day) => {
+                        const isSelected = scheduleDaysOfWeek.includes(day.id);
+                        return (
+                          <button
+                            key={day.id}
+                            type="button"
+                            disabled={readOnly}
+                            onClick={() => {
+                              if (isSelected) {
+                                if (scheduleDaysOfWeek.length > 1) {
+                                  setScheduleDaysOfWeek((prev) => prev.filter((d) => d !== day.id));
+                                } else {
+                                  toast.error("Please keep at least one day selected.");
+                                }
+                              } else {
+                                setScheduleDaysOfWeek((prev) => [...prev, day.id].sort());
+                              }
+                            }}
+                            className={cn(
+                              "flex h-10 w-12 sm:w-14 items-center justify-center rounded-xl border text-xs font-semibold transition-all",
+                              isSelected
+                                ? "border-neutral-950 bg-neutral-950 text-white shadow-xs"
+                                : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300",
+                            )}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Date Bounds */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label={scheduleType === "recurring" ? "Start Date" : "Practice Date"}>
+                    <input
+                      type="date"
+                      className={inputClasses}
+                      value={scheduleStartDate}
+                      onChange={(e) => setScheduleStartDate(e.target.value)}
+                      disabled={readOnly}
+                      required
+                    />
+                  </Field>
+
+                  {scheduleType === "recurring" && (
+                    <Field label="End Date (optional)">
+                      <input
+                        type="date"
+                        className={inputClasses}
+                        value={scheduleEndDate}
+                        onChange={(e) => setScheduleEndDate(e.target.value)}
+                        disabled={readOnly}
+                        placeholder="Ongoing indefinitely"
+                      />
+                    </Field>
+                  )}
+                </div>
+
+                {/* Calling Window & Timezone */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <Field label="Calling Window Start">
+                    <input
+                      type="time"
+                      className={inputClasses}
+                      value={scheduleWindowStart}
+                      onChange={(e) => setScheduleWindowStart(e.target.value)}
+                      disabled={readOnly}
+                      required
+                    />
+                  </Field>
+
+                  <Field label="Calling Window End">
+                    <input
+                      type="time"
+                      className={inputClasses}
+                      value={scheduleWindowEnd}
+                      onChange={(e) => setScheduleWindowEnd(e.target.value)}
+                      disabled={readOnly}
+                      required
+                    />
+                  </Field>
+
+                  <Field label="Timezone">
+                    <select
+                      className={inputClasses}
+                      value={scheduleTimezone}
+                      onChange={(e) => setScheduleTimezone(e.target.value)}
+                      disabled={readOnly}
+                    >
+                      {TIMEZONES.map((tz) => (
+                        <option key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+
+                {/* WhatsApp Notification Configuration */}
+                <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/40 p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <IconBadge icon={WhatsappLogo} variant="emerald" size="sm" weight="fill" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-emerald-950">
+                          Advance WhatsApp Notification
+                        </h4>
+                        <p className="text-xs text-emerald-800/80">
+                          Alert practitioners on WhatsApp ahead of the practice call window so they are prepared.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        checked={scheduleNotifyWhatsapp}
+                        onChange={(e) => setScheduleNotifyWhatsapp(e.target.checked)}
+                        disabled={readOnly}
+                        className="peer sr-only"
+                      />
+                      <div className="peer h-6 w-11 rounded-full bg-neutral-300 after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-neutral-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-emerald-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none" />
+                    </label>
+                  </div>
+
+                  {scheduleNotifyWhatsapp && (
+                    <div className="space-y-3 pt-2 border-t border-emerald-200/60">
+                      <Field label="Send Reminder In Advance">
+                        <select
+                          className={inputClasses}
+                          value={scheduleNotifyMinutes}
+                          onChange={(e) => setScheduleNotifyMinutes(Number(e.target.value))}
+                          disabled={readOnly}
+                        >
+                          {ADVANCE_NOTICE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+
+                      <Field label="Custom WhatsApp Message Note (optional)">
+                        <input
+                          type="text"
+                          className={inputClasses}
+                          value={scheduleCustomMessage}
+                          onChange={(e) => setScheduleCustomMessage(e.target.value)}
+                          placeholder="e.g. Please find a quiet place for your 2-minute practice call."
+                          disabled={readOnly}
+                        />
+                      </Field>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Preview Summary */}
+                <div className="flex flex-col gap-2 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-xs">
+                  <div className="flex items-center gap-2 font-semibold text-neutral-900">
+                    <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+                    Calendar Sync Preview
+                  </div>
+                  <p className="text-neutral-600">
+                    {scheduleType === "recurring" ? (
+                      <>
+                        Runs every{" "}
+                        <strong className="text-neutral-900 font-semibold">
+                          {scheduleDaysOfWeek
+                            .map((d) => DAYS_OF_WEEK_OPTIONS.find((x) => x.id === d)?.label)
+                            .join(", ")}
+                        </strong>{" "}
+                        between{" "}
+                        <strong className="text-neutral-900 font-semibold">
+                          {scheduleWindowStart} – {scheduleWindowEnd}
+                        </strong>{" "}
+                        ({scheduleTimezone}).
+                      </>
+                    ) : (
+                      <>
+                        Runs on{" "}
+                        <strong className="text-neutral-900 font-semibold">
+                          {scheduleStartDate}
+                        </strong>{" "}
+                        between{" "}
+                        <strong className="text-neutral-900 font-semibold">
+                          {scheduleWindowStart} – {scheduleWindowEnd}
+                        </strong>{" "}
+                        ({scheduleTimezone}).
+                      </>
+                    )}
+                    {scheduleNotifyWhatsapp && (
+                      <>
+                        {" "}WhatsApp reminder is sent{" "}
+                        <strong className="text-emerald-800 font-semibold">
+                          {scheduleNotifyMinutes} minutes
+                        </strong>{" "}
+                        prior.
+                      </>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-neutral-500">
+                    Once saved or submitted, this practice session is automatically registered on the{" "}
+                    <a
+                      href="/schedule"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neutral-900 font-semibold underline underline-offset-2"
+                    >
+                      Schedule Calendar
+                    </a>{" "}
+                    where you can view, trigger immediately, or reschedule at any time.
+                  </p>
+                </div>
+              </div>
+            )}
+          </SectionCard>
+        )}
+
         {!readOnly && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -2210,17 +2772,11 @@ export function CourseEditorPage() {
             </div>
             {isLastTab ? (
               <div className="flex flex-wrap items-center gap-3">
-                <Button variant="outline" loading={saving} onClick={runSave}>
-                  Save draft
-                </Button>
-                <Button loading={submitting} onClick={runSubmit}>
-                  Save & submit for review
-                </Button>
+                <Button variant="outline" loading={saving} onClick={runSave}><FloppyDisk className="h-4 w-4 mr-1.5 shrink-0" weight="duotone" />Save draft</Button>
+                <Button loading={submitting} onClick={runSubmit}><PaperPlaneTilt className="h-4 w-4 mr-1.5 shrink-0" weight="duotone" />Save & submit for review</Button>
               </div>
             ) : (
-              <Button onClick={() => setActiveTab(EDITOR_TABS[tabIndex + 1])}>
-                Next
-              </Button>
+              <Button onClick={() => setActiveTab(EDITOR_TABS[tabIndex + 1])}>Next <CaretRight className="h-4 w-4 ml-1.5 shrink-0" weight="bold" /></Button>
             )}
           </div>
         )}
@@ -2228,9 +2784,7 @@ export function CourseEditorPage() {
         {readOnly && (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" onClick={goBack}>
-                Back to courses
-              </Button>
+              <Button variant="outline" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-1.5 shrink-0" weight="bold" />Back to courses</Button>
               {courseId && (
                 <Button 
                   variant="ghost" 
@@ -2490,9 +3044,7 @@ export function CourseEditorPage() {
                                 : "bg-neutral-100 text-neutral-600",
                         )}
                       >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-4 w-4">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-                        </svg>
+                        <PhoneCall className="h-4 w-4" weight="duotone" />
                       </div>
 
                       <div className="min-w-0">
@@ -2608,6 +3160,267 @@ export function CourseEditorPage() {
               }}
             >
               Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Add Video Resource Modal ── */}
+      <Modal
+        open={addVideoModalOpen}
+        onClose={() => setAddVideoModalOpen(false)}
+        title="Add WhatsApp Video Resource"
+        description="Configure a video walkthrough (YouTube, Loom, Vimeo) that the AI Voice Coach or platform can send directly to learners over WhatsApp."
+      >
+        <form onSubmit={handleAddVideoResource} className="flex flex-col gap-4">
+          <Field label="Video URL">
+            <input
+              type="url"
+              className={inputClasses}
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=... or https://loom.com/share/..."
+              required
+            />
+          </Field>
+          <Field label="Resource Title">
+            <input
+              type="text"
+              className={inputClasses}
+              value={videoTitle}
+              onChange={(e) => setVideoTitle(e.target.value)}
+              placeholder="e.g. Product Demo Walkthrough (3 mins)"
+              required
+            />
+          </Field>
+          <Field label="Description (optional)">
+            <textarea
+              className={`${textareaClasses} min-h-20`}
+              value={videoDesc}
+              onChange={(e) => setVideoDesc(e.target.value)}
+              placeholder="What this video covers and why it helps..."
+              rows={2}
+            />
+          </Field>
+          <Field label="Delivery Trigger">
+            <select
+              value={videoTrigger}
+              onChange={(e) =>
+                setVideoTrigger(
+                  e.target.value as CourseWhatsappResource["deliveryTrigger"],
+                )
+              }
+              className={inputClasses}
+            >
+              <option value="during_call">
+                In-Call Live Share (Coach prompts or learner asks during practice)
+              </option>
+              <option value="post_call">
+                Post-Call Summary (Automated dispatch after call analysis)
+              </option>
+              <option value="on_enroll">
+                On Enrollment (Immediate dispatch upon course assignment)
+              </option>
+              <option value="manual">Manual Dispatch (On-demand by manager/coach)</option>
+            </select>
+          </Field>
+          <Field label="Custom WhatsApp Message Note (optional)">
+            <input
+              type="text"
+              className={inputClasses}
+              value={videoCaption}
+              onChange={(e) => setVideoCaption(e.target.value)}
+              placeholder="e.g. Watch this quick 3-minute video to master the pitch!"
+            />
+          </Field>
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setAddVideoModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white">
+              Add Video Resource
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── Add Web Link Resource Modal ── */}
+      <Modal
+        open={addLinkModalOpen}
+        onClose={() => setAddLinkModalOpen(false)}
+        title="Add WhatsApp Web Resource"
+        description="Add a reference link, cheat sheet, portal URL, or interactive guide to share with learners over WhatsApp."
+      >
+        <form onSubmit={handleAddLinkResource} className="flex flex-col gap-4">
+          <Field label="Webpage or Document URL">
+            <input
+              type="url"
+              className={inputClasses}
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              placeholder="https://example.com/pricing-cheat-sheet or https://docs.google.com/..."
+              required
+            />
+          </Field>
+          <Field label="Resource Title">
+            <input
+              type="text"
+              className={inputClasses}
+              value={linkTitle}
+              onChange={(e) => setLinkTitle(e.target.value)}
+              placeholder="e.g. Pricing & Objection Cheat Sheet"
+              required
+            />
+          </Field>
+          <Field label="Description (optional)">
+            <textarea
+              className={`${textareaClasses} min-h-20`}
+              value={linkDesc}
+              onChange={(e) => setLinkDesc(e.target.value)}
+              placeholder="Summary of this reference guide..."
+              rows={2}
+            />
+          </Field>
+          <Field label="Delivery Trigger">
+            <select
+              value={linkTrigger}
+              onChange={(e) =>
+                setLinkTrigger(
+                  e.target.value as CourseWhatsappResource["deliveryTrigger"],
+                )
+              }
+              className={inputClasses}
+            >
+              <option value="during_call">
+                In-Call Live Share (Coach prompts or learner asks during practice)
+              </option>
+              <option value="post_call">
+                Post-Call Summary (Automated dispatch after call analysis)
+              </option>
+              <option value="on_enroll">
+                On Enrollment (Immediate dispatch upon course assignment)
+              </option>
+              <option value="manual">Manual Dispatch (On-demand by manager/coach)</option>
+            </select>
+          </Field>
+          <Field label="Custom WhatsApp Message Note (optional)">
+            <input
+              type="text"
+              className={inputClasses}
+              value={linkCaption}
+              onChange={(e) => setLinkCaption(e.target.value)}
+              placeholder="e.g. Keep this reference handy for handling pricing queries."
+            />
+          </Field>
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setAddLinkModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-emerald-700 hover:bg-emerald-800 text-white">
+              Add Web Resource
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ── WhatsApp Phone Simulator Preview Modal ── */}
+      <Modal
+        open={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        title="WhatsApp Message Preview"
+        description="Live preview of how this learning resource appears on the learner's WhatsApp device."
+      >
+        <div className="flex flex-col gap-4">
+          {/* Simulated WhatsApp Phone Screen */}
+          <div className="mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-neutral-300 bg-[#EFEAE2] shadow-lg">
+            {/* WhatsApp Header Bar */}
+            <div className="flex items-center justify-between bg-[#075E54] px-4 py-3 text-white">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-700 text-white shadow-xs">
+                  <WhatsAppIcon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-none truncate">
+                    Agility Voice AI Coach
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-emerald-100 font-medium">
+                    online · official training bot
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-100">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* WhatsApp Chat Canvas */}
+            <div className="p-4 min-h-60 flex flex-col justify-end">
+              {previewLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Spinner size="md" className="text-emerald-700" />
+                </div>
+              ) : (
+                <div className="relative max-w-[90%] self-start rounded-2xl rounded-tl-xs bg-white p-3.5 shadow-sm">
+                  {/* Delivery Trigger Badge */}
+                  {previewResource && (
+                    <div className="mb-2 inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-800 uppercase tracking-wider">
+                      Trigger: {previewResource.deliveryTrigger.replace("_", " ")}
+                    </div>
+                  )}
+
+                  {/* WhatsApp Formatted Message Body */}
+                  <div className="text-xs leading-relaxed text-neutral-900 whitespace-pre-wrap font-sans">
+                    {previewText || "Loading message preview..."}
+                  </div>
+
+                  {/* Resource Card Mockup */}
+                  {previewResource?.url && (
+                    <div className="mt-2.5 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 p-2.5">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                          {previewResource.type.toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-neutral-950">
+                            {previewResource.title}
+                          </p>
+                          <p className="truncate text-[10px] text-neutral-500 font-mono">
+                            {previewResource.url}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Message Timestamp and Blue Ticks */}
+                  <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-neutral-400">
+                    <span>Just now</span>
+                    <span className="text-[#53bdeb] font-bold" title="Read by recipient">
+                      ✓✓
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-2 flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPreviewModalOpen(false)}
+            >
+              Close Preview
             </Button>
           </div>
         </div>

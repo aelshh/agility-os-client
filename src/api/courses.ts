@@ -74,6 +74,22 @@ export type VoiceOption = {
   previewUrl?: string;
 };
 
+export type CourseWhatsappResource = {
+  id: string;
+  title: string;
+  type: "video" | "pdf" | "link" | "document" | "text";
+  url?: string;
+  documentId?: string;
+  s3Key?: string;
+  fileName?: string;
+  fileSize?: number;
+  description?: string;
+  caption?: string;
+  deliveryTrigger: "during_call" | "post_call" | "on_enroll" | "manual";
+  enabled: boolean;
+  createdAt?: string;
+};
+
 export type Course = {
   id: string;
   orgId: string;
@@ -103,6 +119,7 @@ export type Course = {
   phoneNumber: string | null;
   provisioningStatus: ProvisioningStatus;
   provisioningError: string | null;
+  whatsappResources: CourseWhatsappResource[];
   audienceIds: string[];
   delivery: CourseDeliverySummary;
   createdBy: string;
@@ -135,6 +152,7 @@ export type CourseInput = {
   telenowKbId?: string | null;
   phoneNumberId?: string | null;
   phoneNumber?: string | null;
+  whatsappResources?: CourseWhatsappResource[];
 };
 
 export type CourseEnrollmentStatus =
@@ -564,4 +582,34 @@ export async function apiGetVoices(provider = "elevenlabs"): Promise<VoiceOption
   }
   const data = (await parseJson(res)) as { voices?: VoiceOption[] };
   return Array.isArray(data.voices) ? data.voices : [];
+}
+
+export async function apiSendCourseWhatsappResource(
+  courseId: string,
+  payload: { resourceId: string; targetUserId?: string; targetPhone?: string },
+): Promise<{ success: boolean; wamid?: string }> {
+  return await unwrap<{ success: boolean; wamid?: string }>(
+    await jsonRequest(
+      `/api/drills/${encodeURIComponent(courseId)}/whatsapp-resources/send`,
+      "POST",
+      payload,
+    ),
+  );
+}
+
+export async function apiPreviewCourseWhatsappMessage(
+  courseId: string,
+  payload: {
+    resource: Partial<CourseWhatsappResource>;
+    courseTitle?: string;
+    userName?: string;
+  },
+): Promise<{ message: string }> {
+  return await unwrap<{ message: string }>(
+    await jsonRequest(
+      `/api/drills/${encodeURIComponent(courseId)}/whatsapp-resources/preview`,
+      "POST",
+      payload,
+    ),
+  );
 }

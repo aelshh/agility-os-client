@@ -10,4 +10,11 @@ export { Tabs } from "./ui/Tabs";
 export type { TabItem } from "./ui/Tabs";
 export { AudioPlayer } from "./AudioPlayer";
 export type { AudioPlayerProps } from "./AudioPlayer";
+export { IconBadge } from "./ui/IconBadge";
+export type {
+  IconBadgeProps,
+  IconBadgeVariant,
+  IconBadgeSize,
+  IconBadgeShape,
+} from "./ui/IconBadge";
 
