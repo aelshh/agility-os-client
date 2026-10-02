@@ -359,7 +359,9 @@ export function CourseCallDetailModal({ enrollment, course, onClose }: CourseCal
                       </h4>
                     </div>
                     <p className="mt-2 text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">
-                      {enrollment.summary}
+                      {typeof enrollment.summary === "string"
+                        ? enrollment.summary
+                        : JSON.stringify(enrollment.summary, null, 2)}
                     </p>
                   </div>
                 )}

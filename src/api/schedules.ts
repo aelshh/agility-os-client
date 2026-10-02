@@ -4,6 +4,8 @@
  * configure calling windows, prior WhatsApp reminders, and manage calendar events.
  */
 
+import { apiFetch } from "./client";
+
 export type CourseScheduleType = "one_time" | "recurring";
 export type CourseScheduleStatus =
   | "scheduled"
@@ -172,9 +174,7 @@ export async function apiListCourseSchedules(filters?: {
   if (filters?.courseId) params.set("courseId", filters.courseId);
   if (filters?.status) params.set("status", filters.status);
 
-  const res = await fetch(`/api/drills/schedules?${params.toString()}`, {
-    credentials: "include",
-  });
+  const res = await apiFetch(`/api/drills/schedules?${params.toString()}`);
   const data = await handleResponse<{ schedules: CourseSchedule[] }>(res);
   return data.schedules;
 }
@@ -187,17 +187,13 @@ export async function apiGetCalendarEvents(
   const params = new URLSearchParams({ from, to });
   if (courseId) params.set("courseId", courseId);
 
-  const res = await fetch(`/api/drills/schedules/calendar/events?${params.toString()}`, {
-    credentials: "include",
-  });
+  const res = await apiFetch(`/api/drills/schedules/calendar/events?${params.toString()}`);
   const data = await handleResponse<{ events: CalendarEventItem[] }>(res);
   return data.events;
 }
 
 export async function apiGetCourseSchedule(id: string): Promise<CourseSchedule> {
-  const res = await fetch(`/api/drills/schedules/${id}`, {
-    credentials: "include",
-  });
+  const res = await apiFetch(`/api/drills/schedules/${id}`);
   const data = await handleResponse<{ schedule: CourseSchedule }>(res);
   return data.schedule;
 }
@@ -205,10 +201,9 @@ export async function apiGetCourseSchedule(id: string): Promise<CourseSchedule> 
 export async function apiCreateCourseSchedule(
   input: CreateCourseScheduleInput,
 ): Promise<CourseSchedule> {
-  const res = await fetch("/api/drills/schedules", {
+  const res = await apiFetch("/api/drills/schedules", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(input),
   });
   const data = await handleResponse<{ schedule: CourseSchedule }>(res);
@@ -219,10 +214,9 @@ export async function apiUpdateCourseSchedule(
   id: string,
   input: UpdateCourseScheduleInput,
 ): Promise<CourseSchedule> {
-  const res = await fetch(`/api/drills/schedules/${id}`, {
+  const res = await apiFetch(`/api/drills/schedules/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(input),
   });
   const data = await handleResponse<{ schedule: CourseSchedule }>(res);
@@ -230,9 +224,8 @@ export async function apiUpdateCourseSchedule(
 }
 
 export async function apiDeleteCourseSchedule(id: string): Promise<void> {
-  const res = await fetch(`/api/drills/schedules/${id}`, {
+  const res = await apiFetch(`/api/drills/schedules/${id}`, {
     method: "DELETE",
-    credentials: "include",
   });
   await handleResponse<{ success: boolean }>(res);
 }
@@ -240,9 +233,8 @@ export async function apiDeleteCourseSchedule(id: string): Promise<void> {
 export async function apiNotifyCourseScheduleNow(
   id: string,
 ): Promise<{ sentCount: number; failedCount: number; message: string }> {
-  const res = await fetch(`/api/drills/schedules/${id}/notify-now`, {
+  const res = await apiFetch(`/api/drills/schedules/${id}/notify-now`, {
     method: "POST",
-    credentials: "include",
   });
   return handleResponse<{ sentCount: number; failedCount: number; message: string }>(res);
 }
@@ -250,9 +242,8 @@ export async function apiNotifyCourseScheduleNow(
 export async function apiRunCourseScheduleNow(
   id: string,
 ): Promise<{ success: boolean; message: string; run: CourseScheduleRun }> {
-  const res = await fetch(`/api/drills/schedules/${id}/run-now`, {
+  const res = await apiFetch(`/api/drills/schedules/${id}/run-now`, {
     method: "POST",
-    credentials: "include",
   });
   return handleResponse<{ success: boolean; message: string; run: CourseScheduleRun }>(res);
 }

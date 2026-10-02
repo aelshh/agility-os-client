@@ -14,6 +14,7 @@ import {
   type TelenowIntegrationStatus,
 } from "../api/telenow";
 import { PhoneNumbersTable } from "../features/telephony/PhoneNumbersTable";
+import { WhatsAppChannelsCard } from "../features/whatsapp";
 const labelClasses = "text-sm font-medium text-neutral-600";
 const inputClasses =
   "w-full rounded-xl border border-neutral-300 bg-neutral-50/70 px-4 py-2.5 text-sm text-neutral-950 placeholder:text-neutral-500 outline-none transition-all focus:border-neutral-900 focus:bg-white focus:ring-2 focus:ring-neutral-900/10";
@@ -280,6 +281,12 @@ export function IntegrationsPage() {
               </div>
             )}
           </Card>
+        </motion.div>
+
+        <motion.div variants={fadeUp} className="w-full">
+          <WhatsAppChannelsCard
+            voiceAiConfigured={Boolean(telenowStatus?.configured)}
+          />
         </motion.div>
 
         {telenowStatus?.configured && (

@@ -5,6 +5,7 @@
  */
 
 import type { AuthErrorPayload } from "../features/auth/auth-context";
+import { apiFetch } from "./client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,10 +63,9 @@ async function parseJson(res: Response): Promise<ApiResponse> {
 export async function apiCreateInvites(
   userIds: string[],
 ): Promise<CreateInvitesResponse> {
-  const res = await fetch("/api/invites", {
+  const res = await apiFetch("/api/invites", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ userIds }),
   });
   const data = await parseJson(res);
@@ -78,17 +78,16 @@ export async function apiCreateInvites(
 // ---------------------------------------------------------------------------
 
 export async function apiListAdmins(): Promise<ListAdminsResponse> {
-  const res = await fetch("/api/admins", { credentials: "include" });
+  const res = await apiFetch("/api/admins");
   const data = await parseJson(res);
   if (!res.ok) throw data as AuthErrorPayload;
   return data as unknown as ListAdminsResponse;
 }
 
 export async function apiGrantAdmin(userId: string): Promise<ApiResponse> {
-  const res = await fetch("/api/admins", {
+  const res = await apiFetch("/api/admins", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ userId }),
   });
   const data = await parseJson(res);
@@ -97,9 +96,8 @@ export async function apiGrantAdmin(userId: string): Promise<ApiResponse> {
 }
 
 export async function apiRevokeAdmin(userId: string): Promise<ApiResponse> {
-  const res = await fetch(`/api/admins/${encodeURIComponent(userId)}/revoke`, {
+  const res = await apiFetch(`/api/admins/${encodeURIComponent(userId)}/revoke`, {
     method: "POST",
-    credentials: "include",
   });
   const data = await parseJson(res);
   if (!res.ok) throw data as AuthErrorPayload;

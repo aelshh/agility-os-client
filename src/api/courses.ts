@@ -5,6 +5,7 @@
  */
 
 import type { AuthErrorPayload } from "../features/auth/auth-context";
+import { apiFetch } from "./client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -238,10 +239,9 @@ function jsonRequest(
   method: string,
   body: unknown,
 ): Promise<Response> {
-  return fetch(url, {
+  return apiFetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(body),
   });
 }
@@ -261,16 +261,14 @@ export async function apiListCourses(
 ): Promise<Course[]> {
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
   const data = await unwrap<{ courses: Course[] }>(
-    await fetch(`/api/drills${query}`, { credentials: "include" }),
+    await apiFetch(`/api/drills${query}`),
   );
   return data.courses;
 }
 
 export async function apiGetCourse(id: string): Promise<Course> {
   const data = await unwrap<{ course: Course }>(
-    await fetch(`/api/drills/${encodeURIComponent(id)}`, {
-      credentials: "include",
-    }),
+    await apiFetch(`/api/drills/${encodeURIComponent(id)}`),
   );
   return data.course;
 }
@@ -293,9 +291,8 @@ export async function apiUpdateCourse(
 }
 
 export async function apiDeleteCourse(id: string): Promise<void> {
-  const res = await fetch(`/api/drills/${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`/api/drills/${encodeURIComponent(id)}`, {
     method: "DELETE",
-    credentials: "include",
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -343,9 +340,7 @@ export async function apiGetCourseEnrollments(
   id: string,
 ): Promise<CourseEnrollment[]> {
   const data = await unwrap<{ enrollments: CourseEnrollment[] }>(
-    await fetch(`/api/drills/${encodeURIComponent(id)}/enrollments`, {
-      credentials: "include",
-    }),
+    await apiFetch(`/api/drills/${encodeURIComponent(id)}/enrollments`),
   );
   return data.enrollments;
 }
@@ -391,9 +386,8 @@ export async function apiUploadCourseDocument(
   const form = new FormData();
   form.append("file", file);
   const data = await unwrap<{ document: CourseDocument }>(
-    await fetch(`/api/drills/${encodeURIComponent(courseId)}/documents`, {
+    await apiFetch(`/api/drills/${encodeURIComponent(courseId)}/documents`, {
       method: "POST",
-      credentials: "include",
       body: form,
     }),
   );
@@ -404,9 +398,9 @@ export async function apiDeleteCourseDocument(
   courseId: string,
   documentId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `/api/drills/${encodeURIComponent(courseId)}/documents/${encodeURIComponent(documentId)}`,
-    { method: "DELETE", credentials: "include" },
+    { method: "DELETE" },
   );
   if (!res.ok) throw (await parseJson(res)) as AuthErrorPayload;
 }
@@ -471,7 +465,7 @@ export async function apiListOrgKnowledgeBases(): Promise<{
   total: number;
 }> {
   return unwrap<{ knowledgeBases: TelenowKnowledgeBase[]; total: number }>(
-    await fetch("/api/drills/knowledge-bases", { credentials: "include" }),
+    await apiFetch("/api/drills/knowledge-bases"),
   );
 }
 
@@ -500,9 +494,7 @@ export async function apiGetCourseKnowledgeBase(courseId: string): Promise<{
     knowledgeBase: TelenowKnowledgeBase | null;
     documents: TelenowKbDocument[];
   }>(
-    await fetch(`/api/drills/${encodeURIComponent(courseId)}/knowledge-base`, {
-      credentials: "include",
-    }),
+    await apiFetch(`/api/drills/${encodeURIComponent(courseId)}/knowledge-base`),
   );
 }
 
@@ -530,11 +522,10 @@ export async function apiUploadCourseKbFileDoc(
   form.append("file", file);
   if (title?.trim()) form.append("title", title.trim());
   const data = await unwrap<{ document: TelenowKbDocument }>(
-    await fetch(
+    await apiFetch(
       `/api/drills/${encodeURIComponent(courseId)}/knowledge-base/documents/upload`,
       {
         method: "POST",
-        credentials: "include",
         body: form,
       },
     ),
@@ -561,18 +552,17 @@ export async function apiDeleteCourseKbDoc(
   courseId: string,
   docId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `/api/drills/${encodeURIComponent(courseId)}/knowledge-base/documents/${encodeURIComponent(docId)}`,
-    { method: "DELETE", credentials: "include" },
+    { method: "DELETE" },
   );
   if (!res.ok) throw (await parseJson(res)) as AuthErrorPayload;
 }
 
 export async function apiGetVoices(provider = "elevenlabs"): Promise<VoiceOption[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `/api/drills/voices?provider=${encodeURIComponent(provider)}`,
     {
-      credentials: "include",
       headers: { Accept: "application/json" },
     },
   );

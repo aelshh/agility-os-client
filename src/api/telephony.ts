@@ -5,6 +5,8 @@
 
 import type { AuthErrorPayload } from "../features/auth/auth-context";
 
+import { apiFetch } from "./client";
+
 export type WorkspacePhoneNumber = {
   id: string;
   e164: string;
@@ -51,7 +53,7 @@ export class TelephonyApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const res = await apiFetch(path, {
     ...init,
     headers: {
       "Content-Type": "application/json",
