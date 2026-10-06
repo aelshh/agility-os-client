@@ -121,6 +121,7 @@ export type Course = {
   provisioningStatus: ProvisioningStatus;
   provisioningError: string | null;
   whatsappResources: CourseWhatsappResource[];
+  whatsappChannelId?: string | null;
   audienceIds: string[];
   delivery: CourseDeliverySummary;
   createdBy: string;
@@ -153,6 +154,7 @@ export type CourseInput = {
   telenowKbId?: string | null;
   phoneNumberId?: string | null;
   phoneNumber?: string | null;
+  whatsappChannelId?: string | null;
   whatsappResources?: CourseWhatsappResource[];
 };
 

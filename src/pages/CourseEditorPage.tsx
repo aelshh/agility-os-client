@@ -38,6 +38,11 @@ import {
   type CourseSchedule,
   type CourseScheduleType,
 } from "../api/schedules";
+import {
+  apiListWhatsAppChannels,
+  formatChannelLabel,
+  type WhatsAppChannel,
+} from "../api/whatsapp";
 import { TIMEZONES } from "../data/options";
 import { Button, Spinner, Tabs, Modal } from "../components";
 import { AudiencePicker } from "../features/courses/AudiencePicker";
@@ -259,6 +264,9 @@ export function CourseEditorPage() {
 
   // ── WhatsApp Deliverable Resources State ──
   const [whatsappResources, setWhatsappResources] = useState<CourseWhatsappResource[]>([]);
+  const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppChannel[]>([]);
+  const [defaultWhatsappChannelId, setDefaultWhatsappChannelId] = useState<string | null>(null);
+  const [whatsappChannelId, setWhatsappChannelId] = useState<string | null>(null);
   const [addVideoModalOpen, setAddVideoModalOpen] = useState(false);
   const [videoTitle, setVideoTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -363,6 +371,7 @@ export function CourseEditorPage() {
         if (Array.isArray(course.whatsappResources)) {
           setWhatsappResources(course.whatsappResources);
         }
+        if (course.whatsappChannelId) setWhatsappChannelId(course.whatsappChannelId);
         if (course.voice) setVoice(course.voice);
         if (course.voiceProvider) setVoiceProvider(course.voiceProvider);
         if (course.phoneNumberId) setPhoneNumberId(course.phoneNumberId);
@@ -375,6 +384,16 @@ export function CourseEditorPage() {
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+
+    apiListWhatsAppChannels()
+      .then((res) => {
+        if (cancelled) return;
+        setWhatsappChannels(res.channels);
+        setDefaultWhatsappChannelId(res.defaultChannelId);
+      })
+      .catch((err) => {
+        console.error("Failed to load WhatsApp channels for CourseEditor", err);
       });
 
     apiListCourseSchedules({ courseId })
@@ -393,6 +412,7 @@ export function CourseEditorPage() {
           setScheduleTimezone(
             sch.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata",
           );
+          if (sch.whatsappChannelId) setWhatsappChannelId(sch.whatsappChannelId);
           setScheduleNotifyWhatsapp(sch.notifyWhatsappPrior ?? true);
           setScheduleNotifyMinutes(sch.notifyMinutesBefore ?? 15);
           setScheduleCustomMessage(sch.customMessage || "");
@@ -406,6 +426,19 @@ export function CourseEditorPage() {
       cancelled = true;
     };
   }, [isNew, courseId, router]);
+
+  useEffect(() => {
+    if (isNew) {
+      apiListWhatsAppChannels()
+        .then((res) => {
+          setWhatsappChannels(res.channels);
+          setDefaultWhatsappChannelId(res.defaultChannelId);
+        })
+        .catch((err) => {
+          console.error("Failed to load WhatsApp channels for new course", err);
+        });
+    }
+  }, [isNew]);
 
   useEffect(() => {
     if (isNew || !courseId) return;
@@ -1049,6 +1082,7 @@ export function CourseEditorPage() {
     if (expiresAt.trim()) input.expiresAt = new Date(expiresAt).toISOString();
     else input.expiresAt = null;
     input.audienceIds = audienceIds;
+    input.whatsappChannelId = whatsappChannelId || null;
     input.whatsappResources = whatsappResources;
     return { ok: true, input };
   };
@@ -1067,6 +1101,7 @@ export function CourseEditorPage() {
       timeWindowStart: scheduleWindowStart || "09:00",
       timeWindowEnd: scheduleWindowEnd || "18:00",
       timezone: scheduleTimezone || "Asia/Kolkata",
+      whatsappChannelId: whatsappChannelId || null,
       notifyWhatsappPrior: scheduleNotifyWhatsapp,
       notifyMinutesBefore: scheduleNotifyMinutes,
       customMessage: scheduleCustomMessage.trim() || null,
@@ -1867,6 +1902,55 @@ export function CourseEditorPage() {
                     <Button type="button" variant="outline" size="sm" onClick={() => setAddLinkModalOpen(true)} className="h-9 px-3.5 border-emerald-300 text-emerald-900 hover:bg-emerald-50"><LinkSimple className="h-4 w-4 mr-1 shrink-0" weight="bold" />Add Web Link</Button>
                   </div>
                 )}
+              </div>
+
+              {/* WhatsApp Sender Channel Selection */}
+              <div className="flex flex-col gap-2 rounded-xl border border-emerald-200/90 bg-white p-3.5 shadow-2xs sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h4 className="text-xs font-semibold text-neutral-900">
+                      WhatsApp Sender Line
+                    </h4>
+                    {whatsappChannels.length === 0 ? (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                        No lines connected
+                      </span>
+                    ) : (
+                      <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                        {whatsappChannels.length} connected
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-neutral-500">
+                    Choose which mobile number and name will deliver WhatsApp resources and prior reminders for this course.
+                  </p>
+                </div>
+
+                <div className="shrink-0">
+                  {whatsappChannels.length > 0 ? (
+                    <select
+                      value={whatsappChannelId || ""}
+                      onChange={(e) => setWhatsappChannelId(e.target.value || null)}
+                      disabled={readOnly}
+                      className="w-full sm:w-auto rounded-lg border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-900 outline-none focus:border-neutral-900 focus:bg-white"
+                    >
+                      <option value="">
+                        {defaultWhatsappChannelId
+                          ? `Use Default: ${formatChannelLabel(whatsappChannels.find((c) => c.id === defaultWhatsappChannelId) || { id: defaultWhatsappChannelId, name: "Default Sender", phone: "", status: "active" })}`
+                          : "Use Organization Default"}
+                      </option>
+                      {whatsappChannels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {formatChannelLabel(c)} {c.id === defaultWhatsappChannelId ? "⭐ (Default)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-neutral-400 italic">
+                      Organization default will be used
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* WhatsApp Resources List */}
@@ -2682,6 +2766,28 @@ export function CourseEditorPage() {
 
                   {scheduleNotifyWhatsapp && (
                     <div className="space-y-3 pt-2 border-t border-emerald-200/60">
+                      {whatsappChannels.length > 0 && (
+                        <Field label="Send Reminder From (WhatsApp Line)">
+                          <select
+                            className={inputClasses}
+                            value={whatsappChannelId || ""}
+                            onChange={(e) => setWhatsappChannelId(e.target.value || null)}
+                            disabled={readOnly}
+                          >
+                            <option value="">
+                              {defaultWhatsappChannelId
+                                ? `Default: ${formatChannelLabel(whatsappChannels.find((c) => c.id === defaultWhatsappChannelId) || { id: defaultWhatsappChannelId, name: "Default Sender", phone: "", status: "active" })}`
+                                : "Use Organization Default Line"}
+                            </option>
+                            {whatsappChannels.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {formatChannelLabel(c)} {c.id === defaultWhatsappChannelId ? "⭐ (Default)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </Field>
+                      )}
+
                       <Field label="Send Reminder In Advance">
                         <select
                           className={inputClasses}

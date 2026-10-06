@@ -5,6 +5,11 @@ import { Button } from "../../components/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import type { CourseSchedule } from "../../api/schedules";
 import {
+  apiListWhatsAppChannels,
+  formatChannelLabel,
+  type WhatsAppChannel,
+} from "../../api/whatsapp";
+import {
   apiGetCourseSchedule,
   apiNotifyCourseScheduleNow,
   apiRunCourseScheduleNow,
@@ -32,6 +37,8 @@ export function ScheduleDetailModal({
   onUpdated,
 }: ScheduleDetailModalProps) {
   const [schedule, setSchedule] = useState<CourseSchedule | null>(null);
+  const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppChannel[]>([]);
+  const [defaultWhatsappChannelId, setDefaultWhatsappChannelId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -56,6 +63,17 @@ export function ScheduleDetailModal({
       }
     }
   };
+
+  useEffect(() => {
+    if (open) {
+      void apiListWhatsAppChannels()
+        .then((res) => {
+          setWhatsappChannels(res.channels);
+          setDefaultWhatsappChannelId(res.defaultChannelId);
+        })
+        .catch(() => {});
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open && scheduleId) {
@@ -322,6 +340,19 @@ export function ScheduleDetailModal({
                       : "Disabled"}
                   </span>
                 </div>
+                {schedule.notifyWhatsappPrior && (
+                  <div className="text-[11px] text-emerald-900 flex items-center justify-between border-t border-emerald-200/60 pt-1.5">
+                    <span className="text-neutral-500">Sender Line:</span>
+                    <span className="font-semibold text-neutral-900">
+                      {(() => {
+                        const targetId = schedule.whatsappChannelId || defaultWhatsappChannelId;
+                        const ch = whatsappChannels.find((c) => c.id === targetId);
+                        if (ch) return formatChannelLabel(ch);
+                        return schedule.whatsappChannelId ? "Custom Line" : "Default Organization Line";
+                      })()}
+                    </span>
+                  </div>
+                )}
                 {schedule.customMessage && (
                   <p className="text-[11px] text-emerald-900 bg-white/70 p-2 rounded border border-emerald-100 italic">
                     &ldquo;{schedule.customMessage}&rdquo;

@@ -5,6 +5,11 @@ import { Button } from "../../components/Button";
 import { Spinner } from "../../components/ui/Spinner";
 import type { Course } from "../../api/courses";
 import { apiListCourses } from "../../api/courses";
+import {
+  apiListWhatsAppChannels,
+  formatChannelLabel,
+  type WhatsAppChannel,
+} from "../../api/whatsapp";
 import type {
   CourseSchedule,
   CourseScheduleType,
@@ -54,6 +59,8 @@ export function CreateScheduleModal({
   const isEditing = Boolean(scheduleToEdit);
 
   const [courses, setCourses] = useState<Course[]>([]);
+  const [whatsappChannels, setWhatsappChannels] = useState<WhatsAppChannel[]>([]);
+  const [defaultWhatsappChannelId, setDefaultWhatsappChannelId] = useState<string | null>(null);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +91,9 @@ export function CreateScheduleModal({
   const [timeWindowEnd, setTimeWindowEnd] = useState(
     scheduleToEdit?.timeWindowEnd ?? "14:00",
   );
+  const [whatsappChannelId, setWhatsappChannelId] = useState<string | null>(
+    scheduleToEdit?.whatsappChannelId ?? null,
+  );
   const [notifyWhatsappPrior, setNotifyWhatsappPrior] = useState(
     scheduleToEdit?.notifyWhatsappPrior ?? true,
   );
@@ -99,6 +109,16 @@ export function CreateScheduleModal({
 
     setLoadingCourses(true);
     setError(null);
+
+    void apiListWhatsAppChannels()
+      .then((res) => {
+        setWhatsappChannels(res.channels);
+        setDefaultWhatsappChannelId(res.defaultChannelId);
+      })
+      .catch((err) => {
+        console.error("Failed to load WhatsApp channels in schedule modal", err);
+      });
+
     void apiListCourses()
       .then((list) => {
         setCourses(list);
@@ -112,6 +132,7 @@ export function CreateScheduleModal({
           setSelectedDays(scheduleToEdit.daysOfWeek ?? [1, 2, 3, 4, 5]);
           setTimeWindowStart(scheduleToEdit.timeWindowStart);
           setTimeWindowEnd(scheduleToEdit.timeWindowEnd);
+          setWhatsappChannelId(scheduleToEdit.whatsappChannelId ?? null);
           setNotifyWhatsappPrior(scheduleToEdit.notifyWhatsappPrior);
           setNotifyMinutesBefore(scheduleToEdit.notifyMinutesBefore);
           setCustomMessage(scheduleToEdit.customMessage ?? "");
@@ -127,6 +148,7 @@ export function CreateScheduleModal({
           setSelectedDays([1, 2, 3, 4, 5]);
           setTimeWindowStart("10:00");
           setTimeWindowEnd("14:00");
+          setWhatsappChannelId(matched?.whatsappChannelId ?? null);
           setNotifyWhatsappPrior(true);
           setNotifyMinutesBefore(30);
           setCustomMessage("");
@@ -143,11 +165,14 @@ export function CreateScheduleModal({
   // Auto-fill title from course selection if title is empty
   const handleCourseChange = (newCourseId: string) => {
     setCourseId(newCourseId);
+    const matched = courses.find((c) => c.id === newCourseId);
     if (!title || title.endsWith("Practice Window")) {
-      const matched = courses.find((c) => c.id === newCourseId);
       if (matched) {
         setTitle(`${matched.title} Practice Window`);
       }
+    }
+    if (!isEditing && matched?.whatsappChannelId) {
+      setWhatsappChannelId(matched.whatsappChannelId);
     }
   };
 
@@ -195,6 +220,7 @@ export function CreateScheduleModal({
           daysOfWeek: selectedDays,
           timeWindowStart,
           timeWindowEnd,
+          whatsappChannelId: whatsappChannelId || null,
           notifyWhatsappPrior,
           notifyMinutesBefore,
           customMessage: customMessage.trim() || null,
@@ -216,6 +242,7 @@ export function CreateScheduleModal({
           daysOfWeek: selectedDays,
           timeWindowStart,
           timeWindowEnd,
+          whatsappChannelId: whatsappChannelId || null,
           notifyWhatsappPrior,
           notifyMinutesBefore,
           customMessage: customMessage.trim() || null,
@@ -465,6 +492,30 @@ export function CreateScheduleModal({
 
           {notifyWhatsappPrior && (
             <div className="space-y-3 pt-2 border-t border-emerald-100">
+              {whatsappChannels.length > 0 && (
+                <div>
+                  <label className="block text-[11px] font-medium text-emerald-950 mb-1">
+                    Sending WhatsApp Line
+                  </label>
+                  <select
+                    value={whatsappChannelId || ""}
+                    onChange={(e) => setWhatsappChannelId(e.target.value || null)}
+                    className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-xs text-neutral-900 shadow-sm focus:border-emerald-600 focus:outline-none"
+                  >
+                    <option value="">
+                      {defaultWhatsappChannelId
+                        ? `Use Default: ${formatChannelLabel(whatsappChannels.find((c) => c.id === defaultWhatsappChannelId) || { id: defaultWhatsappChannelId, name: "Default Sender", phone: "", status: "active" })}`
+                        : "Use Organization Default Line"}
+                    </option>
+                    {whatsappChannels.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {formatChannelLabel(c)} {c.id === defaultWhatsappChannelId ? "⭐ (Default)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label className="block text-[11px] font-medium text-emerald-950 mb-1">
                   Reminder Advance Lead Time

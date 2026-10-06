@@ -41,6 +41,7 @@ export type CourseSchedule = {
   timeWindowStart: string;
   timeWindowEnd: string;
   timezone: string;
+  whatsappChannelId?: string | null;
   notifyWhatsappPrior: boolean;
   notifyMinutesBefore: number;
   customMessage: string | null;
@@ -119,6 +120,7 @@ export type CalendarEventItem = {
   timezone: string;
   status: CourseScheduleStatus;
   scheduleType: CourseScheduleType;
+  whatsappChannelId?: string | null;
   notifyWhatsappPrior?: boolean;
   notifyMinutesBefore?: number;
   ownerName?: string;
@@ -141,6 +143,7 @@ export type CreateCourseScheduleInput = {
   timeWindowStart: string;
   timeWindowEnd: string;
   timezone?: string;
+  whatsappChannelId?: string | null;
   notifyWhatsappPrior?: boolean;
   notifyMinutesBefore?: number;
   customMessage?: string | null;
