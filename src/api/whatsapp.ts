@@ -12,6 +12,42 @@ export interface WhatsAppChannel {
   qualityRating?: string;
 }
 
+export interface WhatsAppChannelsResponse {
+  channels: WhatsAppChannel[];
+  defaultChannelId: string | null;
+}
+
+export function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return "";
+  const clean = phone.trim();
+  if (!clean) return "";
+
+  const digits = clean.replace(/[^\d]/g, "");
+  if (clean.startsWith("+1") && digits.length === 11) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  if (clean.startsWith("+91") && digits.length === 12) {
+    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  }
+  if (clean.startsWith("+44") && digits.length === 12) {
+    return `+44 ${digits.slice(2, 6)} ${digits.slice(6)}`;
+  }
+  if (clean.startsWith("+") && digits.length >= 8 && digits.length <= 15) {
+    return `+${digits.slice(0, 2)} ${digits.slice(2, 6)} ${digits.slice(6)}`;
+  }
+  return clean;
+}
+
+export function formatChannelLabel(channel: WhatsAppChannel): string {
+  const cleanPhone = channel.phone?.trim();
+  const formattedPhone = formatPhoneNumber(cleanPhone);
+  const cleanName = channel.name?.trim();
+  if (cleanPhone && cleanName && cleanName !== cleanPhone && !cleanName.includes(cleanPhone)) {
+    return `${cleanName} (${formattedPhone || cleanPhone})`;
+  }
+  return cleanName || formattedPhone || cleanPhone || channel.id;
+}
+
 export interface WhatsAppSession {
   sessionId: string;
   status: "created" | "qr_ready" | "connecting" | "connected" | "failed" | "expired" | string;
@@ -29,7 +65,7 @@ export interface SendWhatsAppTestResponse {
 /**
  * Fetches all active connected WhatsApp channels for the organization.
  */
-export async function apiListWhatsAppChannels(): Promise<WhatsAppChannel[]> {
+export async function apiListWhatsAppChannels(): Promise<WhatsAppChannelsResponse> {
   const res = await apiFetch("/api/org/whatsapp/channels", {
     method: "GET",
   });
@@ -40,7 +76,26 @@ export async function apiListWhatsAppChannels(): Promise<WhatsAppChannel[]> {
   }
 
   const data = await res.json();
-  return Array.isArray(data.channels) ? data.channels : [];
+  return {
+    channels: Array.isArray(data.channels) ? data.channels : [],
+    defaultChannelId: data.defaultChannelId ?? null,
+  };
+}
+
+/**
+ * Sets the organization default WhatsApp sending channel.
+ */
+export async function apiSetDefaultWhatsAppChannel(channelId: string): Promise<void> {
+  const res = await apiFetch("/api/org/whatsapp/default-channel", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ channelId }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || "Failed to set default WhatsApp channel.");
+  }
 }
 
 /**
@@ -119,6 +174,7 @@ export async function apiDeleteWhatsAppChannel(
 export async function apiSendWhatsAppTest(input: {
   to: string;
   channelId?: string;
+  template?: string;
   message?: string;
 }): Promise<SendWhatsAppTestResponse> {
   const res = await apiFetch("/api/org/whatsapp/test-message", {
