@@ -18,6 +18,9 @@ const ROLE_LABELS: Record<string, string> = {
   practitioner: "Practitioner",
 };
 
+import { EnvelopeSimple, TreeStructure } from "@phosphor-icons/react";
+import { IconBadge } from "../components/ui/IconBadge";
+
 /**
  * Small admin nudge: how many teammates still need an invite to the app.
  * Only rendered when the viewer is an admin AND eligible invitees exist.
@@ -57,29 +60,24 @@ function TeammatesToInviteCard() {
 
   return (
     <div className="w-full max-w-5xl">
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-neutral-900">
-            {eligible} teammate{eligible === 1 ? "" : "s"} still to invite
-          </p>
-          <p className="text-xs text-neutral-600">
-            Send them an email invite so they can set up their account and join
-            the org tree.
-          </p>
+      <div className="flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <IconBadge
+            icon={EnvelopeSimple}
+            variant="amber"
+            size="md"
+            weight="duotone"
+          />
+          <div>
+            <p className="text-sm font-semibold text-neutral-900">
+              {eligible} teammate{eligible === 1 ? "" : "s"} still to invite
+            </p>
+            <p className="text-xs text-neutral-600">
+              Send them an email invite so they can set up their account and join
+              the org tree.
+            </p>
+          </div>
         </div>
-        <svg
-          className="h-5 w-5 shrink-0 text-amber-600"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3" y="4" width="14" height="12" rx="2" />
-          <path d="m3 6 7 5 7-5" />
-        </svg>
       </div>
     </div>
   );
@@ -162,14 +160,22 @@ export function DashboardPage() {
         className="w-full max-w-5xl"
       >
         <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-serif text-xl font-medium text-neutral-950">
-              Org tree
-            </h2>
-            <p className="text-xs text-neutral-500">
-              Built from your HRMS employee directory. Click a node to expand
-              it and open its details; drag to rearrange, scroll to zoom.
-            </p>
+          <div className="flex items-center gap-3">
+            <IconBadge
+              icon={TreeStructure}
+              variant="indigo"
+              size="md"
+              weight="duotone"
+            />
+            <div>
+              <h2 className="font-serif text-xl font-medium text-neutral-950">
+                Org tree
+              </h2>
+              <p className="text-xs text-neutral-500">
+                Built from your HRMS employee directory. Click a node to expand
+                it and open its details; drag to rearrange, scroll to zoom.
+              </p>
+            </div>
           </div>
         </div>
         <div className="h-[420px] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm sm:h-[540px]">

@@ -6,10 +6,24 @@ import { toast } from "sonner";
 import { apiListCourses, apiSubmitCourse } from "../api/courses";
 import type { Course } from "../api/courses";
 import { apiGetTelenowStatus } from "../api/telenow";
-import { Button, Spinner } from "../components";
+import { Button, Spinner, IconBadge } from "../components";
 import { useAuth } from "../features/auth";
 import { StatusBadge } from "../features/courses/StatusBadge";
 import { pageVariants, stagger, fadeUp, EASE } from "../lib/animation";
+import {
+  GraduationCap,
+  CalendarCheck,
+  CheckSquareOffset,
+  Plus,
+  Brain,
+  FileText,
+  ChatCircleText,
+  NotePencil,
+  ChartLineUp,
+  PencilSimple,
+  Eye,
+  PaperPlaneTilt,
+} from "@phosphor-icons/react";
 
 const metaLabel = "text-xs font-medium uppercase tracking-wide text-neutral-400";
 
@@ -81,9 +95,12 @@ export function CoursesPage() {
           className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
         >
           <div className="min-w-0">
-            <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
-              Courses
-            </h1>
+            <div className="flex items-center gap-3">
+              <IconBadge icon={GraduationCap} variant="emerald" size="md" />
+              <h1 className="font-serif text-3xl font-medium tracking-normal text-neutral-950">
+                Courses
+              </h1>
+            </div>
             <p className="mt-1 text-sm font-medium text-neutral-600">
               Build courses to train your team on anything — a new product
               launch, new technology, a new process. Draft them, submit for
@@ -91,10 +108,18 @@ export function CoursesPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => void router.navigate({ to: "/schedule" })}
+              icon={<CalendarCheck size={16} weight="duotone" className="text-blue-600" />}
+            >
+              Schedule Calendar
+            </Button>
             {isArchitect && (
               <Button
                 variant="outline"
                 onClick={() => void router.navigate({ to: "/courses/approvals" })}
+                icon={<CheckSquareOffset size={16} weight="duotone" className="text-amber-600" />}
               >
                 Review queue
               </Button>
@@ -112,19 +137,7 @@ export function CoursesPage() {
                 }
                 void router.navigate({ to: "/courses/new" });
               }}
-              icon={
-                <svg
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <path d="M10 4v12M4 10h12" />
-                </svg>
-              }
+              icon={<Plus size={16} weight="bold" />}
             >
               New course
             </Button>
@@ -167,9 +180,10 @@ export function CoursesPage() {
         ) : courses.length === 0 ? (
           <motion.div
             variants={fadeUp}
-            className="w-full rounded-2xl border border-neutral-200 bg-white p-10 text-center shadow-sm"
+            className="w-full rounded-2xl border border-neutral-200 bg-white p-10 text-center shadow-sm flex flex-col items-center"
           >
-            <p className="text-sm font-semibold text-neutral-900">
+            <IconBadge icon={GraduationCap} variant="emerald" size="lg" className="mb-3" />
+            <p className="text-sm font-semibold text-neutral-950">
               No courses yet
             </p>
             <p className="mx-auto mt-1 max-w-sm text-sm text-neutral-500">
@@ -179,6 +193,7 @@ export function CoursesPage() {
             <Button
               className="mt-5"
               onClick={() => void router.navigate({ to: "/courses/new" })}
+              icon={<Plus size={16} weight="bold" />}
             >
               Create your first course
             </Button>
@@ -199,9 +214,17 @@ export function CoursesPage() {
                 className="flex flex-col rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <h2 className="font-serif text-lg font-medium leading-snug text-neutral-950">
-                    {course.title}
-                  </h2>
+                  <div className="flex items-start gap-2.5">
+                    <IconBadge
+                      icon={GraduationCap}
+                      variant="emerald"
+                      size="sm"
+                      className="mt-0.5"
+                    />
+                    <h2 className="font-serif text-lg font-medium leading-snug text-neutral-950">
+                      {course.title}
+                    </h2>
+                  </div>
                   <StatusBadge status={course.status} />
                 </div>
 
@@ -212,13 +235,14 @@ export function CoursesPage() {
                 )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {(course.faqs?.length ?? 0) > 0 ? (
-                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
-                      {course.faqs.length}{" "}
-                      {course.faqs.length === 1 ? "question" : "questions"}
+                  {course.telenowKbId ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">
+                      <Brain size={13} weight="duotone" className="text-indigo-600" />
+                      Knowledge base
                     </span>
                   ) : (course.docs?.length ?? 0) > 0 ? (
-                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                      <FileText size={13} weight="duotone" className="text-neutral-500" />
                       {course.docs.length}{" "}
                       {course.docs.length === 1 ? "document" : "documents"}
                     </span>
@@ -227,8 +251,16 @@ export function CoursesPage() {
                       No material yet
                     </span>
                   )}
+                  {(course.faqs?.length ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                      <ChatCircleText size={13} weight="duotone" className="text-neutral-500" />
+                      {course.faqs.length}{" "}
+                      {course.faqs.length === 1 ? "question" : "questions"}
+                    </span>
+                  )}
                   {course.knowledgeText?.trim() && (
-                    <span className="rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-100 px-2 py-1 text-xs font-semibold text-neutral-700">
+                      <NotePencil size={13} weight="duotone" className="text-neutral-500" />
                       Notes added
                     </span>
                   )}
@@ -270,12 +302,41 @@ export function CoursesPage() {
                   <p className={metaLabel}>
                     by {course.createdByName ?? "Unknown"}
                   </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    {canActOn(course) && editable(course) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {course.status === "published" ? (
+                      <>
+                        <Button
+                          size="sm"
+                          icon={<ChartLineUp size={14} weight="duotone" />}
+                          onClick={() =>
+                            void router.navigate({
+                              to: "/courses/approvals/$courseId",
+                              params: { courseId: course.id },
+                            })
+                          }
+                        >
+                          Analytics & Scorecards
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          icon={<PencilSimple size={14} weight="duotone" />}
+                          onClick={() =>
+                            void router.navigate({
+                              to: "/courses/$courseId/edit",
+                              params: { courseId: course.id },
+                            })
+                          }
+                        >
+                          Audience & Setup
+                        </Button>
+                      </>
+                    ) : canActOn(course) && editable(course) ? (
                       <>
                         <Button
                           size="sm"
                           variant="outline"
+                          icon={<PencilSimple size={14} weight="duotone" />}
                           onClick={() =>
                             void router.navigate({
                               to: "/courses/$courseId/edit",
@@ -288,16 +349,17 @@ export function CoursesPage() {
                         <Button
                           size="sm"
                           loading={submittingId === course.id}
+                          icon={<PaperPlaneTilt size={14} weight="duotone" />}
                           onClick={() => void handleSubmit(course)}
                         >
                           Submit for review
                         </Button>
                       </>
-                    )}
-                    {(!canActOn(course) || !editable(course)) && (
+                    ) : (
                       <Button
                         size="sm"
                         variant="ghost"
+                        icon={<Eye size={14} weight="duotone" />}
                         onClick={() =>
                           void router.navigate({
                             to: "/courses/$courseId/edit",
@@ -305,7 +367,7 @@ export function CoursesPage() {
                           })
                         }
                       >
-                        View
+                        View Details
                       </Button>
                     )}
                   </div>

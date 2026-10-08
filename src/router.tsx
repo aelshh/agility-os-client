@@ -126,6 +126,15 @@ const profileRoute = createRoute({
   ),
 });
 
+const integrationsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/integrations",
+  component: lazyRouteComponent(
+    () => import("./pages/IntegrationsPage"),
+    "IntegrationsPage",
+  ),
+});
+
 // ---------------------------------------------------------------------------
 // /courses — Course creation & review (content_curator + architect)
 // ---------------------------------------------------------------------------
@@ -183,11 +192,7 @@ const approvalsRoute = createRoute({
 const reviewCourseRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: "/courses/approvals/$courseId",
-  beforeLoad: async ({ context }) => {
-    if (context.user.role !== "architect") {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: courseRoleGuard(),
   component: lazyRouteComponent(
     () => import("./pages/CourseReviewPage"),
     "CourseReviewPage",
@@ -211,6 +216,40 @@ const checkinsRoute = createRoute({
   component: lazyRouteComponent(
     () => import("./pages/DailyCheckinsPage"),
     "DailyCheckinsPage",
+  ),
+});
+
+const callsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/calls",
+  beforeLoad: async ({ context }) => {
+    if (context.user.role !== "architect" && context.user.role !== "content_curator") {
+      throw redirect({ to: "/" });
+    }
+  },
+  component: lazyRouteComponent(
+    () => import("./pages/CallLogsPage"),
+    "CallLogsPage",
+  ),
+});
+
+const scheduleRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/schedule",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseCalendarPage"),
+    "CourseCalendarPage",
+  ),
+});
+
+const calendarRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/calendar",
+  beforeLoad: courseRoleGuard(),
+  component: lazyRouteComponent(
+    () => import("./pages/CourseCalendarPage"),
+    "CourseCalendarPage",
   ),
 });
 
@@ -292,12 +331,16 @@ const routeTree = rootRoute.addChildren([
   protectedRoute.addChildren([
     indexRoute,
     profileRoute,
+    integrationsRoute,
     coursesRoute,
     newCourseRoute,
     editCourseRoute,
     approvalsRoute,
     reviewCourseRoute,
     checkinsRoute,
+    callsRoute,
+    scheduleRoute,
+    calendarRoute,
   ]),
   connectHrmsRoute,
   loginRoute,

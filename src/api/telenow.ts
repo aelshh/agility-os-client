@@ -2,6 +2,8 @@
  * Telenow Voice AI Integration API client.
  */
 
+import { apiFetch } from "./client";
+
 export interface TelenowIntegrationStatus {
   configured: boolean;
   maskedKey: string | null;
@@ -15,9 +17,8 @@ export interface SaveTelenowKeyResponse extends TelenowIntegrationStatus {
 }
 
 export async function apiGetTelenowStatus(): Promise<TelenowIntegrationStatus> {
-  const res = await fetch("/api/org/telenow", {
+  const res = await apiFetch("/api/org/telenow", {
     method: "GET",
-    credentials: "include",
   });
 
   if (!res.ok) {
@@ -31,10 +32,9 @@ export async function apiGetTelenowStatus(): Promise<TelenowIntegrationStatus> {
 export async function apiSaveTelenowKey(
   apiKey: string,
 ): Promise<SaveTelenowKeyResponse> {
-  const res = await fetch("/api/org/telenow", {
+  const res = await apiFetch("/api/org/telenow", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ apiKey }),
   });
 
@@ -51,9 +51,8 @@ export async function apiDisconnectTelenow(): Promise<{
   message: string;
   configured: boolean;
 }> {
-  const res = await fetch("/api/org/telenow", {
+  const res = await apiFetch("/api/org/telenow", {
     method: "DELETE",
-    credentials: "include",
   });
 
   const data = await res.json().catch(() => ({}));

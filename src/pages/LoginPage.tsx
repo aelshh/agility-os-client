@@ -8,6 +8,7 @@ import { Button, Divider, OtpInput } from "../components";
 import { useAuth } from "../features/auth";
 import type { AuthErrorPayload } from "../features/auth";
 import { apiResendOtp, apiVerifyOtp } from "../api/auth";
+import { getApiUrl } from "../api/client";
 import { EASE, slideUp } from "../lib/animation";
 import { isWorkEmail, WORK_EMAIL_MESSAGE } from "../lib/workEmail";
 
@@ -271,7 +272,7 @@ export function LoginPage() {
             {/* Google OAuth — sign in only (existing work-email accounts).
             Account creation is manual-only via the OTP signup flow. */}
             <Button
-              href="/api/auth/google"
+              href={getApiUrl("/api/auth/google")}
               variant="outline"
               className="w-full"
               icon={GOOGLE_ICON}

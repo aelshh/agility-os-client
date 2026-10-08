@@ -24,12 +24,14 @@ type AudiencePickerProps = {
   selected: string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  allowAnyRole?: boolean;
 };
 
 export function AudiencePicker({
   selected,
   onChange,
   disabled,
+  allowAnyRole = false,
 }: AudiencePickerProps) {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<CallableEntry[]>([]);
@@ -46,7 +48,7 @@ export function AudiencePicker({
           tree.employees.flatMap((employee) => {
             const callable =
               employee.userId &&
-              employee.role === "practitioner" &&
+              (allowAnyRole || employee.role === "practitioner") &&
               employee.userStatus === "active" &&
               employee.phone &&
               employee.phone.trim().length > 0;

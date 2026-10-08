@@ -5,6 +5,7 @@
  */
 
 import type { AuthErrorPayload } from "../features/auth/auth-context";
+import { apiFetch } from "./client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -123,7 +124,7 @@ async function parseJson(res: Response): Promise<ApiResponse> {
 // ---------------------------------------------------------------------------
 
 export async function apiGetHrmsStatus(): Promise<HrmsStatus> {
-  const res = await fetch("/api/hrms/status", { credentials: "include" });
+  const res = await apiFetch("/api/hrms/status");
   const data = await parseJson(res);
   if (!res.ok) throw data as AuthErrorPayload;
   return data as unknown as HrmsStatus;
@@ -138,10 +139,9 @@ export async function apiUploadCsv(
   employees: NormalizedEmployee[],
   errors: CsvRowError[],
 ): Promise<CsvUploadResponse> {
-  const res = await fetch("/api/hrms/upload", {
+  const res = await apiFetch("/api/hrms/upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ platform, employees, errors }),
   });
   const data = await parseJson(res);
@@ -157,7 +157,7 @@ let orgTreeInFlight: Promise<OrgTreeData> | null = null;
 
 export function apiGetOrgTree(): Promise<OrgTreeData> {
   if (orgTreeInFlight) return orgTreeInFlight;
-  orgTreeInFlight = fetch("/api/hrms/tree", { credentials: "include" })
+  orgTreeInFlight = apiFetch("/api/hrms/tree")
     .then(async (res) => {
       const data = await parseJson(res);
       if (!res.ok) throw data as AuthErrorPayload;

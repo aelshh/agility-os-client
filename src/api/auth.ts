@@ -5,6 +5,7 @@
  */
 
 import type { AuthUser, AuthErrorPayload } from "../features/auth/auth-context";
+import { apiFetch } from "./client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,10 +57,9 @@ async function parseResponse(res: Response): Promise<ApiResponse> {
 }
 
 function post(url: string, body: unknown): Promise<Response> {
-  return fetch(url, {
+  return apiFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(body),
   });
 }
@@ -69,7 +69,7 @@ function post(url: string, body: unknown): Promise<Response> {
 // ---------------------------------------------------------------------------
 
 export async function apiGetMe(): Promise<AuthUser | null> {
-  const res = await fetch("/api/auth/me", { credentials: "include" });
+  const res = await apiFetch("/api/auth/me");
   if (!res.ok) return null;
   const data = await parseResponse(res);
   return data.user ?? null;
@@ -86,9 +86,8 @@ export async function apiSignIn(
 }
 
 export async function apiSignOut(): Promise<void> {
-  await fetch("/api/auth/session", {
+  await apiFetch("/api/auth/session", {
     method: "DELETE",
-    credentials: "include",
   }).catch(() => {});
 }
 
@@ -111,7 +110,7 @@ export async function apiBootstrapOrg(
 // ---------------------------------------------------------------------------
 
 export async function apiGetInvite(token: string): Promise<InvitePrefill> {
-  const res = await fetch(`/api/invites/${token}`, { credentials: "include" });
+  const res = await apiFetch(`/api/invites/${token}`);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw data as AuthErrorPayload;
   return data as InvitePrefill;

@@ -4,6 +4,7 @@
  */
 
 import type { AuthUser, AuthErrorPayload } from "../features/auth/auth-context";
+import { apiFetch } from "./client";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,10 +72,9 @@ function jsonRequest(
   method: string,
   body: unknown,
 ): Promise<Response> {
-  return fetch(url, {
+  return apiFetch(url, {
     method,
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify(body),
   });
 }
@@ -84,7 +84,7 @@ function jsonRequest(
 // ---------------------------------------------------------------------------
 
 export async function apiGetProfile(): Promise<ProfileData> {
-  const res = await fetch("/api/profile", { credentials: "include" });
+  const res = await apiFetch("/api/profile");
   if (!res.ok) {
     throw (await parseJson(res)) as AuthErrorPayload;
   }
